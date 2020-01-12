@@ -349,7 +349,7 @@ public class CodeCanvas extends Canvas {
             }
         }
 
-        // visible characters + white-space
+        // visible characters + white-space (shift-able)
         else if (chCode.getCode() >= 32) {
             // append to the string-buffer
             mTextBuffers.get(mCaretLineIdx).insert(mCaretOffset, getVisibleChar(ch, chCode));
@@ -362,16 +362,23 @@ public class CodeCanvas extends Canvas {
             render();
         }
 
-        // enter, that is, a new line
+        // enter, that is, a new line (shift-able)
         else if (chCode == KeyCode.ENTER) {
-            // insert a new string-buffer for this new line
-            mTextBuffers.add(
-                    mCaretLineIdx + 1,
-                    new StringBuffer(mTextBuffers.get(mCaretLineIdx).substring(mCaretOffset))
-            );
+            // if the shift is NOT pressed
+            if (!mIsShiftPressed) {
+                // insert a new string-buffer for this new line
+                mTextBuffers.add(
+                        mCaretLineIdx + 1,
+                        new StringBuffer(mTextBuffers.get(mCaretLineIdx).substring(mCaretOffset))
+                );
 
-            // move the sub-string behind the origin caret location to the new line
-            mTextBuffers.get(mCaretLineIdx).delete(mCaretOffset, mTextBuffers.get(mCaretLineIdx).length());
+                // move the sub-string behind the origin caret location to the new line
+                mTextBuffers.get(mCaretLineIdx).delete(mCaretOffset, mTextBuffers.get(mCaretLineIdx).length());
+            }
+            // if the shift is pressed
+            else {
+                mTextBuffers.add(mCaretLineIdx + 1, new StringBuffer());
+            }
 
             // update the caret offset and line index
             mCaretOffset = 0;
