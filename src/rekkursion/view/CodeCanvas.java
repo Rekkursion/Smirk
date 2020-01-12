@@ -1,5 +1,6 @@
 package rekkursion.view;
 
+import com.sun.source.tree.ReturnTree;
 import javafx.event.EventHandler;
 import javafx.geometry.Point2D;
 import javafx.scene.canvas.Canvas;
@@ -10,6 +11,8 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class CodeCanvas extends Canvas {
@@ -17,6 +20,41 @@ public class CodeCanvas extends Canvas {
     private static final double LINE_HEIGHT = 24.0;
     private static final double CARET_WIDTH = 1.0;
     private static final double LINE_START_OFFSET = 3.0;
+
+    private static Map<String, Character> mShiftableCharactersMap;
+
+    // static initialization
+    static {
+        // build up the shift-able characters-map
+        mShiftableCharactersMap = new HashMap<>();
+        for (int k = 65; k <= 90; ++k) {
+            mShiftableCharactersMap.put(String.valueOf((char) k), (char) (k + 32));
+            mShiftableCharactersMap.put(String.valueOf((char) (k + 32)), (char) k);
+        }
+        mShiftableCharactersMap.put("1", '!');
+        mShiftableCharactersMap.put("2", '@');
+        mShiftableCharactersMap.put("3", '#');
+        mShiftableCharactersMap.put("4", '$');
+        mShiftableCharactersMap.put("5", '%');
+        mShiftableCharactersMap.put("6", '^');
+        mShiftableCharactersMap.put("7", '&');
+        mShiftableCharactersMap.put("8", '*');
+        mShiftableCharactersMap.put("9", '(');
+        mShiftableCharactersMap.put("0", ')');
+        mShiftableCharactersMap.put("-", '_');
+        mShiftableCharactersMap.put("=", '+');
+        mShiftableCharactersMap.put("\\", '|');
+        mShiftableCharactersMap.put("]", '}');
+        mShiftableCharactersMap.put("[", '{');
+        mShiftableCharactersMap.put("\'", '\"');
+        mShiftableCharactersMap.put(";", ':');
+        mShiftableCharactersMap.put("/", '?');
+        mShiftableCharactersMap.put(".", '>');
+        mShiftableCharactersMap.put(",", '<');
+        mShiftableCharactersMap.put("`", '~');
+    }
+
+    /* ===================================================================== */
 
     // the graphics context
     private GraphicsContext mGphCxt;
@@ -314,7 +352,7 @@ public class CodeCanvas extends Canvas {
         // visible characters + white-space
         else if (chCode.getCode() >= 32) {
             // append to the string-buffer
-            mTextBuffers.get(mCaretLineIdx).insert(mCaretOffset, ch);
+            mTextBuffers.get(mCaretLineIdx).insert(mCaretOffset, getVisibleChar(ch, chCode));
 
             // update the caret offset
             ++mCaretOffset;
@@ -366,6 +404,13 @@ public class CodeCanvas extends Canvas {
         else if (chCode == KeyCode.SHIFT) {
             mIsShiftPressed = true;
         }
+    }
+
+    // get the visible character
+    private char getVisibleChar(String ch, KeyCode chCode) {
+        if (!mIsShiftPressed)
+            return ch.charAt(0);
+        return mShiftableCharactersMap.getOrDefault(ch, ch.charAt(0));
     }
 
     // render
