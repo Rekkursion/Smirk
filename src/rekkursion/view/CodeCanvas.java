@@ -10,6 +10,7 @@ import javafx.scene.paint.Paint;
 import javafx.scene.text.Font;
 
 import java.util.ArrayList;
+import java.util.regex.Pattern;
 
 public class CodeCanvas extends Canvas {
     private static final double CHARA_WIDTH = 11.0;
@@ -133,21 +134,81 @@ public class CodeCanvas extends Canvas {
 
     // handle the keyboard input invoked by the event of on-key-pressed
     private void handleKeyboardInput(String ch, KeyCode chCode) {
-        // left arrow
+        // left arrow (ctrl-able)
         if (chCode == KeyCode.LEFT) {
-            if (mCaretOffset > 0) {
-                --mCaretOffset;
-                mOrigestCaretOffset = mCaretOffset;
-                render();
+            // ctrl + left: move a word to left
+            if (mIsCtrlPressed) {
+                if (mCaretOffset > 0) {
+                    String identifierRegex = "[0-9A-Za-z_]";
+                    String spaceRegex = "\\s";
+                    String chInFront = mTextBuffers.get(mCaretLineIdx).toString().substring(mCaretOffset - 1, mCaretOffset);
+
+                    // search to left
+                    while (true) {
+                        --mCaretOffset;
+                        if (mCaretOffset == 0)
+                            break;
+
+                        String newChInFront = mTextBuffers.get(mCaretLineIdx).toString().substring(mCaretOffset - 1, mCaretOffset);
+                        if (chInFront.matches(identifierRegex) && newChInFront.matches(identifierRegex))
+                            continue;
+                        if (chInFront.matches(spaceRegex) && newChInFront.matches(spaceRegex))
+                            continue;
+                        break;
+                    }
+
+                    // re-render
+                    mOrigestCaretOffset = mCaretOffset;
+                    render();
+                }
+            }
+
+            // move a single character to left
+            else {
+                if (mCaretOffset > 0) {
+                    --mCaretOffset;
+                    mOrigestCaretOffset = mCaretOffset;
+                    render();
+                }
             }
         }
 
-        // right arrow
+        // right arrow (ctrl-able)
         else if (chCode == KeyCode.RIGHT) {
-            if (mCaretOffset < mTextBuffers.get(mCaretLineIdx).length()) {
-                ++mCaretOffset;
-                mOrigestCaretOffset = mCaretOffset;
-                render();
+            // ctrl + right: move a word to right
+            if (mIsCtrlPressed) {
+                if (mCaretOffset < mTextBuffers.get(mCaretLineIdx).length()) {
+                    String identifierRegex = "[0-9A-Za-z_]";
+                    String spaceRegex = "\\s";
+                    String chBehind = mTextBuffers.get(mCaretLineIdx).toString().substring(mCaretOffset, mCaretOffset + 1);
+
+                    // search to left
+                    while (true) {
+                        ++mCaretOffset;
+                        if (mCaretOffset == mTextBuffers.get(mCaretLineIdx).length())
+                            break;
+
+                        String newChBehind = mTextBuffers.get(mCaretLineIdx).toString().substring(mCaretOffset, mCaretOffset + 1);
+                        if (chBehind.matches(identifierRegex) && newChBehind.matches(identifierRegex))
+                            continue;
+                        if (chBehind.matches(spaceRegex) && newChBehind.matches(spaceRegex))
+                            continue;
+                        break;
+                    }
+
+                    // re-render
+                    mOrigestCaretOffset = mCaretOffset;
+                    render();
+                }
+            }
+
+            // move a single character to right
+            else {
+                if (mCaretOffset < mTextBuffers.get(mCaretLineIdx).length()) {
+                    ++mCaretOffset;
+                    mOrigestCaretOffset = mCaretOffset;
+                    render();
+                }
             }
         }
 
