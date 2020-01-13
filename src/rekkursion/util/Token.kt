@@ -1,5 +1,8 @@
 package rekkursion.util
 
+import javafx.scene.canvas.GraphicsContext
+import javafx.scene.paint.Color
+import rekkursion.manager.PreferenceManager
 import java.util.regex.Matcher
 import java.util.regex.Pattern
 
@@ -40,12 +43,46 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
 class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {
     // the type of this token
     private val mType: TokenType = type
+    val type get() = mType
 
     // the raw text of this token
     private val mText: String = text
+    val text get() = mText
 
     // the basic font-style of this token
     private val mBasicFontStyle: FontStyle = basicFontStyle
+    val basicFontStyle get() = mBasicFontStyle
+
+    // render this token
+    fun render(gphCxt: GraphicsContext?, caretX: Int, caretY: Int, partialText: String = mText) {
+        val lineStartOffset = PreferenceManager.EditorPref.lineStartOffset
+
+        // render back?ground
+        gphCxt?.fill = mBasicFontStyle.bgColor
+        gphCxt?.fillRect(
+                caretX * PreferenceManager.EditorPref.charW + lineStartOffset,
+                caretY * PreferenceManager.EditorPref.lineH,
+                partialText.length * PreferenceManager.EditorPref.charW,
+                PreferenceManager.EditorPref.lineH
+        )
+
+        // render text
+        gphCxt?.fill = mBasicFontStyle.fontColor
+        gphCxt?.fillText(
+                partialText,
+                caretX * PreferenceManager.EditorPref.charW + lineStartOffset,
+                (caretY + 1) * PreferenceManager.EditorPref.lineH - 5
+        )
+
+        // render underline
+        gphCxt?.fill = mBasicFontStyle.underlineColor
+        gphCxt?.fillRect(
+                caretX * PreferenceManager.EditorPref.charW + lineStartOffset,
+                (caretY + 1) * PreferenceManager.EditorPref.lineH - 2.5,
+                partialText.length * PreferenceManager.EditorPref.charW,
+                1.0
+        )
+    }
 
     // to-string
     override fun toString(): String = "Token(Type=$mType, Text='$mText')"

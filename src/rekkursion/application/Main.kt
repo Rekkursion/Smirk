@@ -21,6 +21,9 @@ class Main: Application() {
                 PreferenceManager.windowHeight
         )
         primaryStage.show()
+
+        // for testing
+        test()
     }
 
     // initialize the views
@@ -43,6 +46,11 @@ class Main: Application() {
     // set up the supported languages
     private fun setUpLang() {
         PreferenceManager.LangPref.setUpDefaultSupportedLanguages()
+    }
+
+    // only for testing
+    private fun test() {
+
     }
 
     companion object {

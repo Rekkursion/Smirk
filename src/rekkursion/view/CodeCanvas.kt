@@ -10,6 +10,7 @@ import javafx.scene.text.Font
 import rekkursion.manager.PreferenceManager
 import rekkursion.util.Camera
 import rekkursion.util.Token
+import rekkursion.util.TokenType
 
 import java.util.ArrayList
 import java.util.HashMap
@@ -423,15 +424,44 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 mTextBuffers.joinToString(separator = "\n") { it.toString() }
         )
 
-        var pointer = 0
+        // render all of the tokens
+        var caretX = 0
+        var caretY = 0
         tokens?.forEach { token ->
-            token?.toString()// TODO
+            val type = token.type
+
+            // ^[\\s+]
+            if (type == TokenType.SPACE) {
+                var first = true
+                token.text.split("\n").forEach { sp ->
+                    // switch to the new line
+                    if (!first) {
+                        ++caretY
+                        caretX = 0
+                    }
+
+                    // render space
+                    if (sp.isNotEmpty()) {
+                        token.render(mGphCxt, caretX, caretY, sp)
+                        caretX += sp.length
+                    }
+                    first = false
+                }
+            }
+            // other cases
+            else {
+                // render text
+                token.render(mGphCxt, caretX, caretY)
+
+                // update the caret of x-axis
+                caretX += token.text.length
+            }
         }
 
         // render the texts
-        mGphCxt?.fill = Paint.valueOf("white")
-        for (k in mTextBuffers.indices)
-            mGphCxt?.fillText(mTextBuffers[k].toString(), lineStartOffset, (k + 1) * lineH - 5)
+//        mGphCxt?.fill = Paint.valueOf("white")
+//        for (k in mTextBuffers.indices)
+//            mGphCxt?.fillText(mTextBuffers[k].toString(), lineStartOffset, (k + 1) * lineH - 5)
     }
 
     // render the caret
@@ -440,6 +470,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         val charW = PreferenceManager.EditorPref.charW
         val halfOfCaretWidth = caretW / 2.0
 
+        mGphCxt?.fill = Color.WHITESMOKE
         mGphCxt?.fillRect(
                 mCaretOffset * charW - halfOfCaretWidth + PreferenceManager.EditorPref.lineStartOffset,
                 mCaretLineIdx * PreferenceManager.EditorPref.lineH,

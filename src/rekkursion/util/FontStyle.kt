@@ -49,11 +49,31 @@ class FontStyle {
         }
     }
 
+    // size ratio
     private var mSizeRatio: Double = 1.0
+    val sizeRatio get() = mSizeRatio
+
+    // font color
     private var mFontColor: Color = Color.WHITE
+    val fontColor get() = mFontColor
+
+    // is bold
     private var mIsBold: Boolean = false
+    val isBold get() = mIsBold
+
+    // is italic
     private var mIsItalic: Boolean = false
+    val isItalic get() = mIsItalic
+
+    // is underlined
     private var mIsUnderlined: Boolean = false
+    val isUnderlined get() = mIsUnderlined
+
+    // underline color
     private var mUnderlineColor: Color = Color.TRANSPARENT
+    val underlineColor get() = mUnderlineColor
+
+    // background color
     private var mBgColor: Color = Color.TRANSPARENT
+    val bgColor get() = mBgColor
 }

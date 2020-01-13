@@ -93,7 +93,7 @@ object PreferenceManager {
                                             "^//[^\n]*".toRegex(),
                                             "^/\\*(.|\n)*\\*/".toRegex()
                                     ),
-                                    FontStyle.Builder().setFontColor(Color.LIGHTGRAY).create()
+                                    FontStyle.Builder().setFontColor(Color.DARKGRAY).create()
                             ),
                             // keyword
                             TokenPrototype(
@@ -126,7 +126,7 @@ object PreferenceManager {
                                             "^\\*\\*".toRegex(),
                                             "^[\\+\\-\\*\\/%&\\|\\^=\\!]=".toRegex()
                                     ),
-                                    FontStyle.Builder().setFontColor(Color.ANTIQUEWHITE).create()
+                                    FontStyle.Builder().setFontColor(Color.LIGHTGRAY).create()
                             ),
                             // identifier
                             TokenPrototype(
@@ -142,7 +142,7 @@ object PreferenceManager {
                                     arrayOf(
                                             "(^([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+|[0-9]+)(E\\+|E\\-|e\\+|e\\-|E|e)[0-9]+)|(^([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+))".toRegex()
                                     ),
-                                    FontStyle.Builder().setFontColor(Color.BLUE).create()
+                                    FontStyle.Builder().setFontColor(Color.SKYBLUE).create()
                             ),
                             // integer
                             TokenPrototype(
@@ -150,7 +150,7 @@ object PreferenceManager {
                                     arrayOf(
                                             "^[0-9](_?[0-9])*".toRegex()
                                     ),
-                                    FontStyle.Builder().setFontColor(Color.BLUE).create()
+                                    FontStyle.Builder().setFontColor(Color.SKYBLUE).create()
                             ),
                             // space
                             TokenPrototype(
