@@ -1,7 +1,7 @@
 package rekkursion.manager
 
 import javafx.scene.paint.Color
-import rekkursion.util.FontStyle
+import rekkursion.util.*
 
 object PreferenceManager {
     // region size related
@@ -75,45 +75,109 @@ object PreferenceManager {
 
     // language preference
     object LangPref {
-        // enum: token for lexeme analysis
-        enum class Token {
-            COMMENT, KEYWORD, STRING, OPERATOR, IDENTIFIER, INTEGER, FLOAT, SPACE
+        // hash-map of supported languages
+        private val mSupportedLanguageMap: HashMap<String, Language> = HashMap()
+
+        // the index of the current language used
+        private var mUsedLanguageName: String = ""
+
+        // set up all languages
+        fun setUpDefaultSupportedLanguages() {
+            val xogue = Language(
+                    "Xogue",
+                    arrayOf(
+                            // comment
+                            TokenPrototype(
+                                    TokenType.COMMENT,
+                                    arrayOf(
+                                            "^//[^\n]*".toRegex(),
+                                            "^/\\*(.|\n)*\\*/".toRegex()
+                                    ),
+                                    FontStyle.Builder().setFontColor(Color.LIGHTGRAY).create()
+                            ),
+                            // keyword
+                            TokenPrototype(
+                                    TokenType.KEYWORD,
+                                    arrayOf(
+                                            "^if".toRegex(),
+                                            "^elif".toRegex(),
+                                            "^else".toRegex(),
+                                            "^for".toRegex(),
+                                            "^while".toRegex()
+                                    ),
+                                    FontStyle.Builder().setFontColor(Color.ORANGE).create()
+                            ),
+                            // string
+                            TokenPrototype(
+                                    TokenType.STRING,
+                                    arrayOf(
+                                            "^\".*\"".toRegex(),
+                                            "^\'.*\'".toRegex()
+                                    ),
+                                    FontStyle.Builder().setFontColor(Color.FORESTGREEN).create()
+                            ),
+                            // operator
+                            TokenPrototype(
+                                    TokenType.OPERATOR,
+                                    arrayOf(
+                                            "^[\\+\\-\\*\\/%&\\|\\^=\\!\\(\\)\\[\\]\\{\\};\\?:]".toRegex(),
+                                            "^\\-\\-".toRegex(),
+                                            "^\\+\\+".toRegex(),
+                                            "^\\*\\*".toRegex(),
+                                            "^[\\+\\-\\*\\/%&\\|\\^=\\!]=".toRegex()
+                                    ),
+                                    FontStyle.Builder().setFontColor(Color.ANTIQUEWHITE).create()
+                            ),
+                            // identifier
+                            TokenPrototype(
+                                    TokenType.IDENTIFIER,
+                                    arrayOf(
+                                            "^[_A-Za-z][_A-Za-z0-9]*".toRegex()
+                                    ),
+                                    FontStyle.Builder().create()
+                            ),
+                            // float
+                            TokenPrototype(
+                                    TokenType.FLOAT,
+                                    arrayOf(
+                                            "(^([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+|[0-9]+)(E\\+|E\\-|e\\+|e\\-|E|e)[0-9]+)|(^([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+))".toRegex()
+                                    ),
+                                    FontStyle.Builder().setFontColor(Color.BLUE).create()
+                            ),
+                            // integer
+                            TokenPrototype(
+                                    TokenType.INTEGER,
+                                    arrayOf(
+                                            "^[0-9](_?[0-9])*".toRegex()
+                                    ),
+                                    FontStyle.Builder().setFontColor(Color.BLUE).create()
+                            ),
+                            // space
+                            TokenPrototype(
+                                    TokenType.SPACE,
+                                    arrayOf(
+                                            "^\\s+".toRegex()
+                                    ),
+                                    FontStyle.Builder().create()
+                            )
+                    )
+            )
+
+            addLang(xogue)
+            setUsedLang(xogue.name)
         }
 
-        // enum: language
-        enum class Language(
-                val tokenRegexMap: HashMap<Token, ArrayList<String>>,
-                val tokenFontMap: HashMap<Token, FontStyle>) {
-            Xogue(hashMapOf(
-                    Token.COMMENT to arrayListOf(
-                            "^\\/\\/[^\r\n]*",
-                            "^\\/\\*(.|\r|\n|\r\n)*\\*\\/"
-                    ),
-                    Token.KEYWORD to arrayListOf(
-                            "^if", "^elif", "^else",
-                            "^for", "^while"
-                    ),
-                    Token.STRING to arrayListOf("^\".*\"", "^\'.*\'"),
-                    Token.OPERATOR to arrayListOf(
-                            "[\\+\\-\\*\\/%&\\|\\^=\\!\\(\\)\\[\\]\\{\\};\\?:]",
-                            "\\-\\-", "\\+\\+", "\\*\\*",
-                            "[\\+\\-\\*\\/%&\\|\\^=\\!]="
-                    ),
-                    Token.IDENTIFIER to arrayListOf("^[_A-Za-z][_A-Za-z0-9]*"),
-                    Token.INTEGER to arrayListOf("^[0-9](_?[0-9])*"),
-                    Token.FLOAT to arrayListOf("(^([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+|[0-9]+)(E\\+|E\\-|e\\+|e\\-|E|e)[0-9]+)|(^([0-9]+\\.[0-9]*|[0-9]*\\.[0-9]+))"),
-                    Token.SPACE to arrayListOf("^\\s+")
-            ),
-            hashMapOf(
-                    Token.COMMENT to FontStyle.Builder().setFontColor(Color.LIGHTGRAY).create(),
-                    Token.KEYWORD to FontStyle.Builder().setFontColor(Color.ORANGE).create(),
-                    Token.STRING to FontStyle.Builder().setFontColor(Color.FORESTGREEN).create(),
-                    Token.OPERATOR to FontStyle.Builder().setFontColor(Color.ANTIQUEWHITE).create(),
-                    Token.IDENTIFIER to FontStyle.Builder().create(),
-                    Token.INTEGER to FontStyle.Builder().setFontColor(Color.BLUE).create(),
-                    Token.FLOAT to FontStyle.Builder().setFontColor(Color.BLUE).create(),
-                    Token.SPACE to FontStyle.Builder().create()
-            ));
+        // add a supported language
+        private fun addLang(lang: Language) {
+            mSupportedLanguageMap[lang.name] = lang
         }
+
+        // set the used language
+        private fun setUsedLang(langName: String) {
+            mUsedLanguageName = mSupportedLanguageMap[langName]?.name ?: ""
+        }
+
+        // get the used language
+        fun getUsedLang() = mSupportedLanguageMap[mUsedLanguageName]
     }
 }

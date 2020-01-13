@@ -9,6 +9,7 @@ import javafx.scene.paint.Paint
 import javafx.scene.text.Font
 import rekkursion.manager.PreferenceManager
 import rekkursion.util.Camera
+import rekkursion.util.Token
 
 import java.util.ArrayList
 import java.util.HashMap
@@ -34,6 +35,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // the text buffers for each line
     private val mTextBuffers = ArrayList<StringBuffer>()
+
+    // all of the classified tokens
+    private val mTokens = ArrayList<Token>()
 
     // is holding ctrl
     private var mIsCtrlPressed = false
@@ -136,8 +140,18 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // handle the keyboard input invoked by the event of on-key-pressed
     private fun handleKeyboardInput(ch: String, chCode: KeyCode) {
+        // F5
+        if (chCode == KeyCode.F5) {
+            val res = PreferenceManager.LangPref.getUsedLang()!!.classifyIntoTokens(
+                    mTextBuffers.joinToString(separator = "\n") { it.toString() }
+            )
+            res!!.forEach {
+                println(it.toString())
+            }
+        }
+
         // left arrow (ctrl-able)
-        if (chCode == KeyCode.LEFT) {
+        else if (chCode == KeyCode.LEFT) {
             // ctrl + left: move a word to left
             if (mIsCtrlPressed) {
                 if (mCaretOffset > 0) {
@@ -383,7 +397,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // render
     private fun render() {
         val lineH = PreferenceManager.EditorPref.lineH
-        val lineStartOffset = PreferenceManager.EditorPref.lineStartOffset
 
         // render the background
         mGphCxt?.fill = PreferenceManager.codeCanvasBgColor
@@ -393,13 +406,32 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mGphCxt?.fill = PreferenceManager.lineHintColor
         mGphCxt?.fillRect(0.0, mCaretLineIdx * lineH, mWidth, lineH)
 
+        // render the text
+        renderText()
+
+        // render the caret
+        renderCaret()
+    }
+
+    // render the text
+    private fun renderText() {
+        val lineH = PreferenceManager.EditorPref.lineH
+        val lineStartOffset = PreferenceManager.EditorPref.lineStartOffset
+
+        // do lexeme analysis
+        val tokens = PreferenceManager.LangPref.getUsedLang()!!.classifyIntoTokens(
+                mTextBuffers.joinToString(separator = "\n") { it.toString() }
+        )
+
+        var pointer = 0
+        tokens?.forEach { token ->
+            token?.toString()// TODO
+        }
+
         // render the texts
         mGphCxt?.fill = Paint.valueOf("white")
         for (k in mTextBuffers.indices)
             mGphCxt?.fillText(mTextBuffers[k].toString(), lineStartOffset, (k + 1) * lineH - 5)
-
-        // render the caret
-        renderCaret()
     }
 
     // render the caret
