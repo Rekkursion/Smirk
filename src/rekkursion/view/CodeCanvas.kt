@@ -4,8 +4,10 @@ import javafx.geometry.Point2D
 import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
 import javafx.scene.input.KeyCode
+import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
 import javafx.scene.text.Font
+import rekkursion.manager.PreferenceManager
 import rekkursion.util.Camera
 
 import java.util.ArrayList
@@ -120,10 +122,10 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         val origOffset = mCaretOffset
 
         // set the new line index of the caret
-        mCaretLineIdx = min(mTextBuffers.size - 1, floor(mouseY / LINE_HEIGHT).toInt())
+        mCaretLineIdx = min(mTextBuffers.size - 1, floor(mouseY / PreferenceManager.EditorPref.lineH).toInt())
 
         // set the new caret offset
-        mCaretOffset = min(mTextBuffers[mCaretLineIdx].length, (mouseX / CHARA_WIDTH).roundToInt())
+        mCaretOffset = min(mTextBuffers[mCaretLineIdx].length, (mouseX / PreferenceManager.EditorPref.charW).roundToInt())
 
         // re-render if the current line changed
         if (mCaretLineIdx != origLineIdx || mCaretOffset != origOffset) {
@@ -380,18 +382,21 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // render
     private fun render() {
+        val lineH = PreferenceManager.EditorPref.lineH
+        val lineStartOffset = PreferenceManager.EditorPref.lineStartOffset
+
         // render the background
-        mGphCxt?.fill = Paint.valueOf("#333")
-        mGphCxt?.fillRect(0.0, 0.0, 1200.0, 600.0)
+        mGphCxt?.fill = PreferenceManager.codeCanvasBgColor
+        mGphCxt?.fillRect(0.0, 0.0, PreferenceManager.codeCvsWidth, PreferenceManager.codeCvsHeight)
 
         // render the line hint
-        mGphCxt?.fill = Paint.valueOf("#555")
-        mGphCxt?.fillRect(0.0, mCaretLineIdx * LINE_HEIGHT, mWidth, LINE_HEIGHT)
+        mGphCxt?.fill = PreferenceManager.lineHintColor
+        mGphCxt?.fillRect(0.0, mCaretLineIdx * lineH, mWidth, lineH)
 
         // render the texts
         mGphCxt?.fill = Paint.valueOf("white")
         for (k in mTextBuffers.indices)
-            mGphCxt?.fillText(mTextBuffers[k].toString(), LINE_START_OFFSET, (k + 1) * LINE_HEIGHT - 5)
+            mGphCxt?.fillText(mTextBuffers[k].toString(), lineStartOffset, (k + 1) * lineH - 5)
 
         // render the caret
         renderCaret()
@@ -399,21 +404,24 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // render the caret
     private fun renderCaret() {
-        val halfOfCaretWidth = CARET_WIDTH / 2.0
+        val caretW = PreferenceManager.EditorPref.caretW
+        val charW = PreferenceManager.EditorPref.charW
+        val halfOfCaretWidth = caretW / 2.0
+
         mGphCxt?.fillRect(
-                mCaretOffset * CHARA_WIDTH - halfOfCaretWidth + LINE_START_OFFSET,
-                mCaretLineIdx * LINE_HEIGHT,
-                CARET_WIDTH,
-                LINE_HEIGHT
+                mCaretOffset * charW - halfOfCaretWidth + PreferenceManager.EditorPref.lineStartOffset,
+                mCaretLineIdx * PreferenceManager.EditorPref.lineH,
+                caretW,
+                PreferenceManager.EditorPref.lineH
         )
     }
 
     // static scope
     companion object {
-        private const val CHARA_WIDTH = 11.0
-        private const val LINE_HEIGHT = 24.0
-        private const val CARET_WIDTH = 1.0
-        private const val LINE_START_OFFSET = 3.0
+//        private const val CHARA_WIDTH = 11.0
+//        private const val LINE_HEIGHT = 24.0
+//        private const val CARET_WIDTH = 1.0
+//        private const val LINE_START_OFFSET = 3.0
 
         // the hash-map for shift-able characters
         private val mShiftableCharactersMap: MutableMap<String, Char>? = HashMap()
