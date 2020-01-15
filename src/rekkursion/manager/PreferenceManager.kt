@@ -88,6 +88,22 @@ object PreferenceManager {
         fun setUpDefaultSupportedLanguages() {
             // region build Xogue
             val xogue = Language.Builder("Xogue")
+                    .addPredefinedOperators(
+                            "+", "-", "*", "/", "%", "&", "|", "^", "**",
+                            "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=", "**=", "=",
+                            "++", "--",
+                            ",", ".", ";", "?", ":", "->",
+                            "(", ")", "[", "]", "{", "}",
+                            "!", ">", "<", "==", ">=", "<=", "!="
+                    )
+                    .addPredefinedKeywords(
+                            "if", "else", "elif", "switch", "case", "default", "when",
+                            "for", "while", "repeat", "break", "continue", "goto",
+                            "var", "fun", "return",
+                            "try", "throw", "catch", "finally",
+                            "int8", "int16", "int32", "int64", "float", "double", "string", "char",
+                            "za_warudo"
+                    )
                     // comment
                     .addTokenPrototype(TokenPrototype(
                             TokenType.COMMENT,
@@ -209,14 +225,15 @@ object PreferenceManager {
                     }
                     // keyword
                     TokenType.KEYWORD -> {
-                        // TODO: keyword's state-machine
+                        prototype?.getStateMachineBuilder()
+                                ?.buildStateMachineByLiteralSymbols(xogue.predefinedKeywords)
                     }
-                    // identifier
+                    // identifier (un-closing problem)
                     TokenType.IDENTIFIER -> {
                         prototype?.getStateMachineBuilder()
                                 ?.addState(State("building"))
                                 ?.addState(State("identifierEND", StateType.END))
-
+                                // acceptable: \\s+, operators
                                 ?.addEdge("START", "[_A-Za-z]", "building")
                                 ?.addEdge("building", "[_A-Za-z0-9]", "building")
                                 ?.addEdge("building", "OTHERS", "identifierEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
@@ -250,8 +267,10 @@ object PreferenceManager {
                     }
                     // operator
                     TokenType.OPERATOR -> {
-                        // TODO: operator's state-machine
+                        prototype?.getStateMachineBuilder()
+                                ?.buildStateMachineByLiteralSymbols(xogue.predefinedOperators)
                     }
+                    // floating point (un-closing problem)
                     TokenType.FLOATING -> {
                         prototype?.getStateMachineBuilder()
                                 ?.addState(State("digits"))
@@ -262,7 +281,7 @@ object PreferenceManager {
                                 ?.addState(State("floating_exp_digits"))
                                 ?.addState(State("floatEND", StateType.END))
                                 ?.addState(State("doubleEND", StateType.END))
-
+                                // acceptable: //s+, operators
                                 ?.addEdge("START", "[0-9]", "digits")
                                 ?.addEdge("START", "\\.", "a_dot")
                                 ?.addEdge("digits", "\\.", "floating")
@@ -281,6 +300,7 @@ object PreferenceManager {
                                 ?.addEdge("floating_exp_digits", "OTHERS", "doubleEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
                                 ?.addEdge("floating_exp_sign", "[0-9]", "floating_exp_digits")
                     }
+                    // integer (un-closing problem)
                     TokenType.INTEGER -> {
                         prototype?.getStateMachineBuilder()
                                 ?.addState(State("starts_w_zero"))
@@ -296,7 +316,7 @@ object PreferenceManager {
                                 ?.addState(State("hices"))
                                 ?.addState(State("hices_underline"))
                                 ?.addState(State("intEND", StateType.END))
-
+                                // acceptable: //s+, operators
                                 ?.addEdge("START", "0", "starts_w_zero")
                                 ?.addEdge("START", "[1-9]", "digits")
                                 ?.addEdge("starts_w_zero", "b", "binary_mode")
@@ -325,6 +345,7 @@ object PreferenceManager {
                                 ?.addEdge("hices", "OTHERS", "intEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
                                 ?.addEdge("hices_underline", "[0-9A-Fa-f]", "hices")
                     }
+                    // space
                     TokenType.SPACE -> {
                         prototype?.getStateMachineBuilder()
                                 ?.addState(State("spaceEND", StateType.END))

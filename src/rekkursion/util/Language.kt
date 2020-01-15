@@ -13,6 +13,20 @@ class Language(langName: String) {
             mLang.mTokenPrototypes.add(tokenPrototype)
             return this
         }
+
+        // add pre-defined operator symbols
+        fun addPredefinedOperators(vararg operatorSymbols: String): Builder {
+            for (opSym in operatorSymbols)
+                mLang.mPredefinedOperatorSymbols.add(opSym)
+            return this
+        }
+
+        // add pre-defined keywords
+        fun addPredefinedKeywords(vararg keywords: String): Builder {
+            for (kw in keywords)
+                mLang.mPredefinedKeywords.add(kw)
+            return this
+        }
     }
 
     /* ===================================================================== */
@@ -22,7 +36,15 @@ class Language(langName: String) {
     val name get() = mLangName
 
     // the prototypes of each kind of tokens
-    private val mTokenPrototypes: ArrayList<TokenPrototype> = arrayListOf()
+    private val mTokenPrototypes = ArrayList<TokenPrototype>()
+
+    // pre-defined operators
+    private val mPredefinedOperatorSymbols = ArrayList<String>()
+    val predefinedOperators get() = mPredefinedOperatorSymbols.toTypedArray()
+
+    // pre-defined keywords
+    private val mPredefinedKeywords = ArrayList<String>()
+    val predefinedKeywords get() = mPredefinedKeywords.toTypedArray()
 
     /* ===================================================================== */
 

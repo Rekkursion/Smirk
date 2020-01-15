@@ -38,11 +38,16 @@ class State(contentText: String, type: StateType = StateType.INTERMEDIATE) {
         return false
     }
 
+    // find a certain edge by the edge text
+    fun findEdgeByText(edgeText: String, isOutgoing: Boolean): Edge? {
+        return if (isOutgoing)
+            mOutgoingPort.find { it.edgeText == edgeText }
+        else
+            mIngoingPort.find { it.edgeText == edgeText }
+    }
+
     // add out-going edge
     private fun addOutgoingEdge(edge: Edge) {
-        // END state shall NOT have any out-going edge
-        if (mType == StateType.END)
-            return
         mOutgoingPort.add(edge)
     }
 

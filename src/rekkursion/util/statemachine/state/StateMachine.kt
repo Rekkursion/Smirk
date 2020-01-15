@@ -2,6 +2,8 @@ package rekkursion.util.statemachine.state
 
 import rekkursion.util.statemachine.edge.Edge
 import rekkursion.util.statemachine.edge.EdgeType
+import java.util.*
+import kotlin.collections.HashSet
 
 class StateMachine {
     // state-machine builder
@@ -38,6 +40,46 @@ class StateMachine {
 
             return this
         }
+
+        // build the state-machine by literal symbols
+        fun buildStateMachineByLiteralSymbols(symbols: Array<String>) {
+            // clear the whole state-machine
+            clear(true)
+
+            // iterate every symbol
+            for (symbol in symbols) {
+                var curState: State? = mStateMachine.getState("START", StateType.START) ?: break
+
+                // iterate every character
+                symbol.forEachIndexed { index, ch ->
+                    // TODO: character pre-processing
+                    val str = ch.toString()
+
+                    // try to find out the out-going edge we need
+                    val outgoingEdge = curState!!.findEdgeByText(str, true)
+
+                    // check if it's the last character of this symbol
+                    val isLastChar = index == symbol.length - 1
+
+                    // doesn't exist -> create the state and the edge
+                    curState = if (outgoingEdge == null) {
+                        val newState = State(UUID.randomUUID().toString(), if (isLastChar) StateType.END else StateType.INTERMEDIATE)
+                        addState(newState)
+                        addEdge(curState!!.text, str, newState.text)
+                        newState
+                    }
+                    // exists -> translate to the destination state of that edge
+                    else
+                        outgoingEdge.dstState
+                }
+            }
+        }
+
+        // clear the whole state-machine
+        private fun clear(shouldRemainStart: Boolean): Builder {
+            mStateMachine.mStates.removeIf { !shouldRemainStart || it.type != StateType.START }
+            return this
+        }
     }
 
     /* ===================================================================== */
@@ -55,6 +97,9 @@ class StateMachine {
 
     // get the builder to modify this state-machine
     fun getBuilder() = Builder(this)
+
+    // get a certain state by the content text and the type
+    fun getState(text: String, type: StateType): State? = mStates.find { it.text == text && it.type == type }
 
     /* ===================================================================== */
 

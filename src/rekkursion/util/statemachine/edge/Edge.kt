@@ -21,6 +21,7 @@ class Edge(srcState: State, dstState: State, edgeText: String, edgeType: EdgeTyp
 
     // the text (could be regular expression) of this edge
     private val mEdgeText = edgeText
+    val edgeText get() = mEdgeText
 
     /* ===================================================================== */
 
