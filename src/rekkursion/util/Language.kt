@@ -1,16 +1,30 @@
 package rekkursion.util
 
-class Language(
-        langName: String,
-        tokenPrototypes: Array<TokenPrototype>) {
+class Language(langName: String) {
+    // language builder
+    class Builder(langName: String) {
+        private val mLang: Language = Language(langName)
+
+        // create the language
+        fun create(): Language = mLang
+
+        // add the token prototype into this language
+        fun addTokenPrototype(tokenPrototype: TokenPrototype): Builder {
+            mLang.mTokenPrototypes.add(tokenPrototype)
+            return this
+        }
+    }
+
+    /* ===================================================================== */
 
     // the language's name
     private val mLangName = langName
     val name get() = mLangName
 
     // the prototypes of each kind of tokens
-    private var mTokenPrototypes: Array<TokenPrototype>
-            = Array(TokenType.values().size) { tokenPrototypes[it] }
+    private val mTokenPrototypes: ArrayList<TokenPrototype> = arrayListOf()
+
+    /* ===================================================================== */
 
     // get a certain token prototype
     fun getTokenPrototype(tokenType: TokenType): TokenPrototype? {

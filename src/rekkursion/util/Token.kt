@@ -1,15 +1,16 @@
 package rekkursion.util
 
 import javafx.scene.canvas.GraphicsContext
-import javafx.scene.paint.Color
 import rekkursion.manager.PreferenceManager
-import java.util.regex.Matcher
-import java.util.regex.Pattern
+import rekkursion.util.statemachine.state.StateMachine
 
 // enum: token types for the lexeme analysis
 enum class TokenType {
-    COMMENT, KEYWORD, STRING, OPERATOR, IDENTIFIER, FLOAT, INTEGER, SPACE
+    // FLOATING includes float and double
+    COMMENT, KEYWORD, IDENTIFIER, STRING, CHAR, OPERATOR, FLOATING, INTEGER, SPACE
 }
+
+/* ===================================================================== */
 
 // the token prototypes are the same in a certain language
 // but are differentiated by languages
@@ -27,6 +28,11 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
         get() = mFontStyle
         set(value) { mFontStyle = value }
 
+    // the state-machine of this token prototype for the lexeme analysis
+    private val mStateMachine: StateMachine = StateMachine()
+
+    /* ===================================================================== */
+
     // check if a certain piece of text matches this token or not
     fun matches(text: String): Pair<Boolean, String> {
         for (regex in mRegexArray) {
@@ -37,7 +43,12 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
         }
         return Pair(false, "")
     }
+
+    // get the state-machine builder
+    fun getStateMachineBuilder(): StateMachine.Builder = mStateMachine.getBuilder()
 }
+
+/* ===================================================================== */
 
 // the real tokens are differentiated in a certain language
 class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {

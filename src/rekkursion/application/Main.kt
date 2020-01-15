@@ -7,7 +7,6 @@ import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import rekkursion.manager.PreferenceManager
 import rekkursion.view.CodeCanvas
-import java.util.regex.Pattern
 
 class Main: Application() {
     override fun start(primaryStage: Stage) {
@@ -50,7 +49,6 @@ class Main: Application() {
 
     // only for testing
     private fun test() {
-
     }
 
     companion object {

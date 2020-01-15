@@ -2,20 +2,35 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="cdb932d9-7e58-4d94-93a9-e7b232ef17da" name="Default" comment="">
+      <change afterPath="$PROJECT_DIR$/src/rekkursion/util/Compiler.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rekkursion/util/statemachine/edge/Edge.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rekkursion/util/statemachine/edge/EdgeType.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rekkursion/util/statemachine/state/State.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rekkursion/util/statemachine/state/StateMachine.kt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/rekkursion/util/statemachine/state/StateType.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/dictionaries/admin.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/dictionaries/admin.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/application/Main$Companion.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/application/Main$Companion.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/application/Main.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/application/Main.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/manager/PreferenceManager$EditorPref.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/manager/PreferenceManager$EditorPref.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/manager/PreferenceManager$LangPref.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/manager/PreferenceManager$LangPref.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/manager/PreferenceManager.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/manager/PreferenceManager.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/util/Language.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/util/Language.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/util/Token.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/util/Token.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/util/TokenPrototype.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/util/TokenPrototype.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/util/TokenType.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/util/TokenType.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$Companion.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$Companion.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$handleKeyboardInput$res$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$handleKeyboardInput$res$1.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$1.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$2.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$2.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$3.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$3.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$4.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$4.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$5.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$initEvents$5.class" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$renderText$tokens$1.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas$renderText$tokens$1.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas.class" beforeDir="false" afterPath="$PROJECT_DIR$/out/production/Smirk/rekkursion/view/CodeCanvas.class" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rekkursion/application/Main.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/rekkursion/application/Main.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rekkursion/manager/PreferenceManager.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/rekkursion/manager/PreferenceManager.kt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/rekkursion/util/FontStyle.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/rekkursion/util/FontStyle.kt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/rekkursion/util/Language.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/rekkursion/util/Language.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rekkursion/util/Token.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/rekkursion/util/Token.kt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/rekkursion/view/CodeCanvas.kt" beforeDir="false" afterPath="$PROJECT_DIR$/src/rekkursion/view/CodeCanvas.kt" afterDir="false" />
     </list>
@@ -77,8 +92,8 @@
       <list>
         <option value="Class" />
         <option value="Kotlin File" />
-        <option value="Kotlin Enum" />
         <option value="Kotlin Class" />
+        <option value="Kotlin Enum" />
       </list>
     </option>
   </component>
@@ -113,7 +128,12 @@
     <property name="recentsLimit" value="5" />
   </component>
   <component name="RecentsManager">
+    <key name="MoveKotlinTopLevelDeclarationsDialog.RECENTS_KEY">
+      <recent name="rekkursion.util.statemachine.state" />
+    </key>
     <key name="MoveFile.RECENT_KEYS">
+      <recent name="D:\projects\intellij_idea_projects\Smirk\src\rekkursion\util\statemachine\edge" />
+      <recent name="D:\projects\intellij_idea_projects\Smirk\src\rekkursion\util\statemachine" />
       <recent name="D:\projects\intellij_idea_projects\Smirk\src\rekkursion\layout" />
     </key>
   </component>
