@@ -6,10 +6,13 @@ import javafx.scene.canvas.GraphicsContext
 import javafx.scene.input.KeyCode
 import javafx.scene.paint.Color
 import javafx.scene.text.Font
+import rekkursion.exception.NoTokenTypeException
 import rekkursion.manager.PreferenceManager
 import rekkursion.util.Camera
 import rekkursion.util.Token
 import rekkursion.util.TokenType
+import rekkursion.util.tool.MutablePair
+import java.lang.Exception
 
 import java.util.ArrayList
 import java.util.HashMap
@@ -33,11 +36,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // be used when going up/down
     private var mOrigestCaretOffset = 0
 
-    // the text buffers for each line
-    private val mTextBuffers = ArrayList<StringBuffer>()
-
-    // all of the classified tokens
-    private val mTokens = ArrayList<Token>()
+    // for each line: text buffer & analyzed tokens
+    private val mTextBuffersAndTokens = ArrayList<MutablePair<StringBuffer, ArrayList<Token>>>()
 
     // is holding ctrl
     private var mIsCtrlPressed = false
@@ -54,7 +54,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // constructor
     init {
-        mTextBuffers.add(StringBuffer())
+        mTextBuffersAndTokens.add(MutablePair(StringBuffer(), arrayListOf()))
 
         initGraphicsContext()
         initEvents()
@@ -126,10 +126,10 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         val origOffset = mCaretOffset
 
         // set the new line index of the caret
-        mCaretLineIdx = min(mTextBuffers.size - 1, floor(mouseY / PreferenceManager.EditorPref.lineH).toInt())
+        mCaretLineIdx = min(mTextBuffersAndTokens.size - 1, floor(mouseY / PreferenceManager.EditorPref.lineH).toInt())
 
         // set the new caret offset
-        mCaretOffset = min(mTextBuffers[mCaretLineIdx].length, (mouseX / PreferenceManager.EditorPref.charW).roundToInt())
+        mCaretOffset = min(mTextBuffersAndTokens[mCaretLineIdx].first.length, (mouseX / PreferenceManager.EditorPref.charW).roundToInt())
 
         // re-render if the current line changed
         if (mCaretLineIdx != origLineIdx || mCaretOffset != origOffset) {
@@ -142,12 +142,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     private fun handleKeyboardInput(ch: String, chCode: KeyCode) {
         // F5
         if (chCode == KeyCode.F5) {
-            val res = PreferenceManager.LangPref.getUsedLang()!!.classifyIntoTokens(
-                    mTextBuffers.joinToString(separator = "\n") { it.toString() }
-            )
-            res!!.forEach {
-                println(it.toString())
-            }
         }
 
         // left arrow (ctrl-able)
@@ -157,7 +151,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 if (mCaretOffset > 0) {
                     val identifierRegex = "[0-9A-Za-z_]"
                     val spaceRegex = "\\s"
-                    val chInFront = mTextBuffers[mCaretLineIdx].toString().substring(mCaretOffset - 1, mCaretOffset)
+                    val chInFront = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset - 1, mCaretOffset)
 
                     // search to left
                     while (true) {
@@ -165,7 +159,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                         if (mCaretOffset == 0)
                             break
 
-                        val newChInFront = mTextBuffers[mCaretLineIdx].toString().substring(mCaretOffset - 1, mCaretOffset)
+                        val newChInFront = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset - 1, mCaretOffset)
                         if (chInFront.matches(identifierRegex.toRegex()) && newChInFront.matches(identifierRegex.toRegex()))
                             continue
                         if (chInFront.matches(spaceRegex.toRegex()) && newChInFront.matches(spaceRegex.toRegex()))
@@ -192,18 +186,18 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         else if (chCode == KeyCode.RIGHT) {
             // ctrl + right: move a word to right
             if (mIsCtrlPressed) {
-                if (mCaretOffset < mTextBuffers[mCaretLineIdx].length) {
+                if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
                     val identifierRegex = "[0-9A-Za-z_]"
                     val spaceRegex = "\\s"
-                    val chBehind = mTextBuffers[mCaretLineIdx].toString().substring(mCaretOffset, mCaretOffset + 1)
+                    val chBehind = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset, mCaretOffset + 1)
 
                     // search to left
                     while (true) {
                         ++mCaretOffset
-                        if (mCaretOffset == mTextBuffers[mCaretLineIdx].length)
+                        if (mCaretOffset == mTextBuffersAndTokens[mCaretLineIdx].first.length)
                             break
 
-                        val newChBehind = mTextBuffers[mCaretLineIdx].toString().substring(mCaretOffset, mCaretOffset + 1)
+                        val newChBehind = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset, mCaretOffset + 1)
                         if (chBehind.matches(identifierRegex.toRegex()) && newChBehind.matches(identifierRegex.toRegex()))
                             continue
                         if (chBehind.matches(spaceRegex.toRegex()) && newChBehind.matches(spaceRegex.toRegex()))
@@ -218,7 +212,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             }
             // move a single character to right
             else {
-                if (mCaretOffset < mTextBuffers[mCaretLineIdx].length) {
+                if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
                     ++mCaretOffset
                     mOrigestCaretOffset = mCaretOffset
                     render()
@@ -230,16 +224,16 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         else if (chCode == KeyCode.UP) {
             if (mCaretLineIdx > 0) {
                 --mCaretLineIdx
-                mCaretOffset = min(mOrigestCaretOffset, mTextBuffers[mCaretLineIdx].length)
+                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
                 render()
             }
         }
 
         // down arrow
         else if (chCode == KeyCode.DOWN) {
-            if (mCaretLineIdx < mTextBuffers.size - 1) {
+            if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
                 ++mCaretLineIdx
-                mCaretOffset = min(mOrigestCaretOffset, mTextBuffers[mCaretLineIdx].length)
+                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
                 render()
             }
         }
@@ -248,15 +242,15 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         else if (chCode == KeyCode.END) {
             // ctrl + end: go to the last character of the last line
             if (mIsCtrlPressed) {
-                mCaretLineIdx = mTextBuffers.size - 1
-                mCaretOffset = mTextBuffers[mCaretLineIdx].length
+                mCaretLineIdx = mTextBuffersAndTokens.size - 1
+                mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx].first.length
                 mOrigestCaretOffset = mCaretOffset
                 render()
             }
             // go to the last character of the current line
             else {
-                if (mCaretOffset != mTextBuffers[mCaretLineIdx].length) {
-                    mCaretOffset = mTextBuffers[mCaretLineIdx].length
+                if (mCaretOffset != mTextBuffersAndTokens[mCaretLineIdx].first.length) {
+                    mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx].first.length
                     mOrigestCaretOffset = mCaretOffset
                     render()
                 }
@@ -287,7 +281,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         else if (chCode == KeyCode.BACK_SPACE) {
             // delete a single character in front of the caret
             if (mCaretOffset > 0) {
-                mTextBuffers[mCaretLineIdx].deleteCharAt(mCaretOffset - 1)
+                mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset - 1)
                 --mCaretOffset
                 mOrigestCaretOffset = mCaretOffset
                 render()
@@ -295,10 +289,10 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // delete a '\n'
             else {
                 if (mCaretLineIdx > 0) {
-                    mCaretOffset = mTextBuffers[mCaretLineIdx - 1].length
+                    mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx - 1].first.length
                     mOrigestCaretOffset = mCaretOffset
-                    mTextBuffers[mCaretLineIdx - 1].append(mTextBuffers[mCaretLineIdx].toString())
-                    mTextBuffers.removeAt(mCaretLineIdx)
+                    mTextBuffersAndTokens[mCaretLineIdx - 1].first.append(mTextBuffersAndTokens[mCaretLineIdx].first.toString())
+                    mTextBuffersAndTokens.removeAt(mCaretLineIdx)
                     --mCaretLineIdx
                     render()
                 }
@@ -308,15 +302,15 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // delete
         else if (chCode == KeyCode.DELETE) {
             // delete a single character behind the caret
-            if (mCaretOffset < mTextBuffers[mCaretLineIdx].length) {
-                mTextBuffers[mCaretLineIdx].deleteCharAt(mCaretOffset)
+            if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
+                mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset)
                 render()
             }
             // delete a '\n'
             else {
-                if (mCaretLineIdx < mTextBuffers.size - 1) {
-                    mTextBuffers[mCaretLineIdx].append(mTextBuffers[mCaretLineIdx + 1].toString())
-                    mTextBuffers.removeAt(mCaretLineIdx + 1)
+                if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
+                    mTextBuffersAndTokens[mCaretLineIdx].first.append(mTextBuffersAndTokens[mCaretLineIdx + 1].first.toString())
+                    mTextBuffersAndTokens.removeAt(mCaretLineIdx + 1)
                     render()
                 }
             }
@@ -325,7 +319,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // visible character & white-space (shift-able)
         else if (chCode.code >= 32) {
             // append to the string-buffer
-            mTextBuffers[mCaretLineIdx].insert(mCaretOffset, getVisibleChar(ch))
+            mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, getVisibleChar(ch))
 
             // update the caret offset
             ++mCaretOffset
@@ -340,17 +334,20 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // if shift is NOT pressed
             if (!mIsShiftPressed) {
                 // insert a new string-buffer for this new line
-                mTextBuffers.add(
+                mTextBuffersAndTokens.add(
                         mCaretLineIdx + 1,
-                        StringBuffer(mTextBuffers[mCaretLineIdx].substring(mCaretOffset))
+                        MutablePair(
+                                StringBuffer(mTextBuffersAndTokens[mCaretLineIdx].first.substring(mCaretOffset)),
+                                arrayListOf()
+                        )
                 )
 
                 // move the sub-string behind the origin caret location to the new line
-                mTextBuffers[mCaretLineIdx].delete(mCaretOffset, mTextBuffers[mCaretLineIdx].length)
+                mTextBuffersAndTokens[mCaretLineIdx].first.delete(mCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
             }
             // if shift is pressed
             else {
-                mTextBuffers.add(mCaretLineIdx + 1, StringBuffer())
+                mTextBuffersAndTokens.add(mCaretLineIdx + 1, MutablePair(StringBuffer(), arrayListOf()))
             }
 
             // update the caret offset and line index
@@ -365,7 +362,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // tab
         else if (chCode == KeyCode.TAB) {
             // append to the string-buffer
-            mTextBuffers[mCaretLineIdx].insert(mCaretOffset, "    ")
+            mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, "    ")
 
             // update the caret offset
             mCaretOffset += 4
@@ -419,42 +416,61 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         val lineStartOffset = PreferenceManager.EditorPref.lineStartOffset
 
         // do lexeme analysis
-        val tokens = PreferenceManager.LangPref.getUsedLang()!!.classifyIntoTokens(
-                mTextBuffers.joinToString(separator = "\n") { it.toString() }
-        )
+        try {
+            mTextBuffersAndTokens[mCaretLineIdx].second =
+            PreferenceManager.LangPref.getUsedLang()!!.compile(
+                    mTextBuffersAndTokens[mCaretLineIdx].first.toString() + " "
+            )!!
+        } catch (e: Exception) {
+            println(e.message)
+        }
+        val tokens: ArrayList<Token> = mTextBuffersAndTokens[mCaretLineIdx].second
 
         // render all of the tokens
-        var caretX = 0
         var caretY = 0
-        tokens?.forEach { token ->
-            val type = token.type
+        // iterate every line
+        mTextBuffersAndTokens.forEach { (_, tokens) ->
+            var caretX = 0
+            // iterate every token in each line
+            tokens.forEach { token ->
+//                val type = token.type
 
-            // ^[\\s+]
-            if (type == TokenType.SPACE) {
-                var first = true
-                token.text.split("\n").forEach { sp ->
-                    // switch to the new line
-                    if (!first) {
-                        ++caretY
-                        caretX = 0
-                    }
-
-                    // render space
-                    if (sp.isNotEmpty()) {
-                        token.render(mGphCxt, caretX, caretY, sp)
-                        caretX += sp.length
-                    }
-                    first = false
-                }
-            }
-            // other cases
-            else {
                 // render text
                 token.render(mGphCxt, caretX, caretY)
 
                 // update the caret of x-axis
                 caretX += token.text.length
+
+                // ^[\\s+]
+//                if (type == TokenType.SPACE) {
+//                    var first = true
+//                    token.text.split("\n").forEach { sp ->
+//                        // switch to the new line
+//                        if (!first) {
+//                            ++caretY
+//                            caretX = 0
+//                        }
+//
+//                        // render space
+//                        if (sp.isNotEmpty()) {
+//                            token.render(mGphCxt, caretX, caretY, sp)
+//                            caretX += sp.length
+//                        }
+//                        first = false
+//                    }
+//                }
+//                // other cases
+//                else {
+//                    // render text
+//                    token.render(mGphCxt, caretX, caretY)
+//
+//                    // update the caret of x-axis
+//                    caretX += token.text.length
+//                }
             }
+
+            // move the caret-y
+            ++caretY
         }
 
         // render the texts
@@ -480,11 +496,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // static scope
     companion object {
-//        private const val CHARA_WIDTH = 11.0
-//        private const val LINE_HEIGHT = 24.0
-//        private const val CARET_WIDTH = 1.0
-//        private const val LINE_START_OFFSET = 3.0
-
         // the hash-map for shift-able characters
         private val mShiftableCharactersMap: MutableMap<String, Char>? = HashMap()
 

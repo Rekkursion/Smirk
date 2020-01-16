@@ -148,7 +148,7 @@ object PreferenceManager {
                             arrayOf(
                                     "^\".*\"".toRegex()
                             ),
-                            FontStyle.Builder().setFontColor(Color.FORESTGREEN).create()
+                            FontStyle.Builder().setFontColor(Color.LIGHTGREEN).create()
                     ))
                     // character
                     .addTokenPrototype(TokenPrototype(
@@ -168,7 +168,7 @@ object PreferenceManager {
                                     "^\\*\\*".toRegex(),
                                     "^[\\+\\-\\*\\/%&\\|\\^=\\!]=".toRegex()
                             ),
-                            FontStyle.Builder().setFontColor(Color.LIGHTGRAY).create()
+                            FontStyle.Builder().setFontColor(Color.MEDIUMPURPLE).create()
                     ))
                     // floating point
                     .addTokenPrototype(TokenPrototype(
@@ -232,11 +232,14 @@ object PreferenceManager {
                     TokenType.IDENTIFIER -> {
                         prototype?.getStateMachineBuilder()
                                 ?.addState(State("building"))
+                                ?.addState(State("ERROR", StateType.ERROR))
                                 ?.addState(State("identifierEND", StateType.END))
+
                                 // acceptable: \\s+, operators
                                 ?.addEdge("START", "[_A-Za-z]", "building")
                                 ?.addEdge("building", "[_A-Za-z0-9]", "building")
-                                ?.addEdge("building", "OTHERS", "identifierEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
+                                ?.addEdge("building", "ACCEPTABLE_SYMBOLS", "identifierEND", EdgeType.ACCEPTABLE_SYMBOLS)
+                                ?.addEdge("building", "OTHERS", "ERROR", EdgeType.OTHERS_AND_NOT_CONSUMED)
                     }
                     // string
                     TokenType.STRING -> {
@@ -279,6 +282,7 @@ object PreferenceManager {
                                 ?.addState(State("floating_exp"))
                                 ?.addState(State("floating_exp_sign"))
                                 ?.addState(State("floating_exp_digits"))
+                                ?.addState(State("ERROR", StateType.ERROR))
                                 ?.addState(State("floatEND", StateType.END))
                                 ?.addState(State("doubleEND", StateType.END))
                                 // acceptable: //s+, operators
@@ -292,12 +296,14 @@ object PreferenceManager {
                                 ?.addEdge("floating", "[0-9]", "floating")
                                 ?.addEdge("floating", "E|e", "floating_exp")
                                 ?.addEdge("floating", "F|f", "floatEND")
-                                ?.addEdge("floating", "OTHERS", "doubleEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
+                                ?.addEdge("floating", "ACCEPTABLE_SYMBOLS", "doubleEND", EdgeType.ACCEPTABLE_SYMBOLS)
+                                ?.addEdge("floating", "OTHERS", "ERROR", EdgeType.OTHERS_AND_NOT_CONSUMED)
                                 ?.addEdge("floating_exp", "[0-9]", "floating_exp_digits")
                                 ?.addEdge("floating_exp", "\\+|\\-", "floating_exp_sign")
                                 ?.addEdge("floating_exp_digits", "F|f", "floatEND")
                                 ?.addEdge("floating_exp_digits", "[0-9]", "floating_exp_digits")
-                                ?.addEdge("floating_exp_digits", "OTHERS", "doubleEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
+                                ?.addEdge("floating_exp_digits", "ACCEPTABLE_SYMBOLS", "doubleEND", EdgeType.ACCEPTABLE_SYMBOLS)
+                                ?.addEdge("floating_exp_digits", "OTHERS", "ERROR", EdgeType.OTHERS_AND_NOT_CONSUMED)
                                 ?.addEdge("floating_exp_sign", "[0-9]", "floating_exp_digits")
                     }
                     // integer (un-closing problem)
@@ -315,6 +321,7 @@ object PreferenceManager {
                                 ?.addState(State("octals_underline"))
                                 ?.addState(State("hices"))
                                 ?.addState(State("hices_underline"))
+                                ?.addState(State("ERROR", StateType.ERROR))
                                 ?.addState(State("intEND", StateType.END))
                                 // acceptable: //s+, operators
                                 ?.addEdge("START", "0", "starts_w_zero")
@@ -324,25 +331,30 @@ object PreferenceManager {
                                 ?.addEdge("starts_w_zero", "x", "hex_mode")
                                 ?.addEdge("starts_w_zero", "_", "digits_underline")
                                 ?.addEdge("starts_w_zero", "[0-9]", "digits")
-                                ?.addEdge("starts_w_zero", "OTHERS", "intEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
+                                ?.addEdge("starts_w_zero", "ACCEPTABLE_SYMBOLS", "intEND", EdgeType.ACCEPTABLE_SYMBOLS)
+                                ?.addEdge("starts_w_zero", "OTHERS", "ERROR", EdgeType.OTHERS_AND_NOT_CONSUMED)
                                 ?.addEdge("digits", "[0-9]", "digits")
                                 ?.addEdge("digits", "_", "digits_underline")
-                                ?.addEdge("digits", "OTHERS", "intEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
+                                ?.addEdge("digits", "ACCEPTABLE_SYMBOLS", "intEND", EdgeType.ACCEPTABLE_SYMBOLS)
+                                ?.addEdge("digits", "OTHERS", "ERROR", EdgeType.OTHERS_AND_NOT_CONSUMED)
                                 ?.addEdge("digits_underline", "[0-9]", "digits")
                                 ?.addEdge("binary_mode", "[0-1]", "binaries")
                                 ?.addEdge("binaries", "[0-1]", "binaries")
                                 ?.addEdge("binaries", "_", "binaries_underline")
-                                ?.addEdge("binaries", "OTHERS", "intEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
+                                ?.addEdge("binaries", "ACCEPTABLE_SYMBOLS", "intEND", EdgeType.ACCEPTABLE_SYMBOLS)
+                                ?.addEdge("binaries", "OTHERS", "ERROR", EdgeType.OTHERS_AND_NOT_CONSUMED)
                                 ?.addEdge("binaries_underline", "[0-1]", "binaries")
                                 ?.addEdge("octal_mode", "[0-7]", "octals")
                                 ?.addEdge("octals", "[0-7]", "octals")
                                 ?.addEdge("octals", "_", "octals_underline")
-                                ?.addEdge("octals", "OTHERS", "intEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
+                                ?.addEdge("octals", "ACCEPTABLE_SYMBOLS", "intEND", EdgeType.ACCEPTABLE_SYMBOLS)
+                                ?.addEdge("octals", "OTHERS", "ERROR", EdgeType.OTHERS_AND_NOT_CONSUMED)
                                 ?.addEdge("octals_underline", "[0-7]", "octals")
                                 ?.addEdge("hex_mode", "[0-9A-Fa-f]", "hices")
                                 ?.addEdge("hices", "[0-9A-Fa-f]", "hices")
                                 ?.addEdge("hices", "_", "hices_underline")
-                                ?.addEdge("hices", "OTHERS", "intEND", EdgeType.OTHERS_AND_NOT_CONSUMED)
+                                ?.addEdge("hices", "ACCEPTABLE_SYMBOLS", "intEND", EdgeType.ACCEPTABLE_SYMBOLS)
+                                ?.addEdge("hices", "OTHERS", "ERROR", EdgeType.OTHERS_AND_NOT_CONSUMED)
                                 ?.addEdge("hices_underline", "[0-9A-Fa-f]", "hices")
                     }
                     // space
@@ -355,6 +367,13 @@ object PreferenceManager {
                 }
             }
             // endregion
+
+            TokenType.values().forEach { tokenType ->
+                val prototype = xogue.getTokenPrototype(tokenType)
+                println(tokenType.name)
+                prototype?.getStateMachineBuilder()?.create()?.print()
+                println("--------------------------------------------------------\n")
+            }
 
             addLang(xogue)
             setUsedLang(xogue.name)

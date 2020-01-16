@@ -46,6 +46,9 @@ class Language(langName: String) {
     private val mPredefinedKeywords = ArrayList<String>()
     val predefinedKeywords get() = mPredefinedKeywords.toTypedArray()
 
+    // compiler of this language
+    private val mCompiler = Compiler(this)
+
     /* ===================================================================== */
 
     // get a certain token prototype
@@ -53,6 +56,11 @@ class Language(langName: String) {
         if (tokenType.ordinal < 0 || tokenType.ordinal >= mTokenPrototypes.size)
             return null
         return mTokenPrototypes[tokenType.ordinal]
+    }
+
+    // compile a certain piece of code
+    fun compile(code: String): ArrayList<Token>? {
+        return mCompiler.analyzeLexeme(code)
     }
 
     // classify the code into tokens
@@ -93,7 +101,7 @@ class Language(langName: String) {
                 val tokenPrototype = mTokenPrototypes[tokenType.ordinal]
 
                 // try matching
-                val pair: Pair<Boolean, String> = tokenPrototype.matches(subCode)
+                val pair: Pair<Boolean, String> = tokenPrototype.matches(subCode, arrayOf())
 
                 // if matches successfully
                 if (pair.first) {

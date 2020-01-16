@@ -49,6 +49,8 @@ class Main: Application() {
 
     // only for testing
     private fun test() {
+        val p = Pair<StringBuffer, Int>(StringBuffer(), 3)
+        p.second
     }
 
     companion object {

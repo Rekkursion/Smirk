@@ -101,6 +101,20 @@ class StateMachine {
     // get a certain state by the content text and the type
     fun getState(text: String, type: StateType): State? = mStates.find { it.text == text && it.type == type }
 
+    // get START state
+    fun getStartState(): State? = getState("START", StateType.START)
+
+    // for debugging
+    fun print() {
+        mStates.forEach { cur ->
+            println("current = ${cur.text}\n==================")
+            cur.outgoingEdges.forEach { edge ->
+                println("${edge.srcState.text} -- ${edge.edgeText} -> ${edge.dstState.text}")
+            }
+            println()
+        }
+    }
+
     /* ===================================================================== */
 
     override fun toString(): String {

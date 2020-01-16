@@ -15,6 +15,7 @@ class State(contentText: String, type: StateType = StateType.INTERMEDIATE) {
 
     // the port which is used to store out-going edges
     private val mOutgoingPort = ArrayList<Edge>()
+    val outgoingEdges = mOutgoingPort
 
     // the port which is used to store in-going edges
     private val mIngoingPort = ArrayList<Edge>()
