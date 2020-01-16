@@ -1,4 +1,4 @@
-package rekkursion.util
+package rekkursion.util.tool
 
 import javafx.scene.paint.Color
 

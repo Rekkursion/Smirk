@@ -1,18 +1,19 @@
 package rekkursion.util
 
 import javafx.scene.canvas.GraphicsContext
+import javafx.scene.paint.Color
 import rekkursion.exception.LexemeAnalysisException
 import rekkursion.manager.PreferenceManager
-import rekkursion.util.statemachine.edge.Edge
 import rekkursion.util.statemachine.edge.EdgeType
 import rekkursion.util.statemachine.state.StateMachine
 import rekkursion.util.statemachine.state.StateType
-import kotlin.test.assertTrue
+import rekkursion.util.tool.FontStyle
 
 // enum: token types for the lexeme analysis
 enum class TokenType {
     // FLOATING includes float and double
-    COMMENT, KEYWORD, IDENTIFIER, STRING, CHAR, OPERATOR, FLOATING, INTEGER, SPACE
+    COMMENT, KEYWORD, IDENTIFIER, STRING, CHAR, OPERATOR, FLOATING, INTEGER, SPACE,
+    UNKNOWN
 }
 
 /* ===================================================================== */
@@ -39,17 +40,6 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
     /* ===================================================================== */
 
     // check if a certain piece of text matches this token or not
-//    fun matches(text: String): Pair<Boolean, String> {
-//        for (regex in mRegexArray) {
-//            val pattern = regex.toPattern()
-//            val matcher = pattern.matcher(text)
-//            if (matcher.find())
-//                return Pair(true, matcher.group())
-//        }
-//        return Pair(false, "")
-//    }
-
-    // check if a certain piece of text matches this token or not
     fun matches(texts: String, predefinedOperatorSymbols: Array<String>): Pair<Boolean, String> {
         var pointer = 0
         val textsLen = texts.length
@@ -60,7 +50,7 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
         while (pointer < textsLen) {
             // currently at an ERROR state -> failed
             if (curState.type == StateType.ERROR)
-                return Pair(false, "")
+                return Pair(false, texts.substring(0, pointer))
 
             // check if the simulation of this state-machine is blocked or not
             var blocked = true
@@ -99,7 +89,7 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
 
                 // currently at an ERROR state -> failed
                 if (curState.type == StateType.ERROR)
-                    return Pair(false, "")
+                    return Pair(false, texts.substring(0, pointer))
                 // other cases
                 else {
                     // matched
@@ -123,7 +113,7 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
                         Pair(true, texts.substring(0, pointer))
                     // not at an END state -> failed
                     else
-                        Pair(false, "")
+                        Pair(false, texts.substring(0, pointer))
                 }
                 // OTHERS edge exists
                 else {
@@ -138,11 +128,22 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
             Pair(true, texts.substring(0, pointer))
         // not at an END state -> failed
         else
-            Pair(false, "")
+            Pair(false, texts.substring(0, pointer))
     }
 
     // get the state-machine builder
     fun getStateMachineBuilder(): StateMachine.Builder = mStateMachine.getBuilder()
+
+    /* ===================================================================== */
+
+    // static scope
+    companion object {
+        val unknownTokenFontStyle = FontStyle.Builder()
+                .setFontColor(Color.WHITE)
+                .setBgColor(Color.color(0.5, 0.5, 0.5, 0.5))
+                .setStyle(isUnderlined = true, underlineColor = Color.RED)
+                .create()
+    }
 }
 
 /* ===================================================================== */

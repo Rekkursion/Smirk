@@ -5,6 +5,7 @@ import rekkursion.util.*
 import rekkursion.util.statemachine.edge.EdgeType
 import rekkursion.util.statemachine.state.State
 import rekkursion.util.statemachine.state.StateType
+import rekkursion.util.tool.FontStyle
 
 object PreferenceManager {
     // region size related

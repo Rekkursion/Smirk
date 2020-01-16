@@ -24,8 +24,11 @@ class Compiler(language: Language) {
             // check if all token types are failed for matching
             var allTokenTypesFailed = true
 
+            // store all failed matched sub-strings
+            var longestFailedMatchedString = ""
+
             // try all of token types
-            TokenType.values().forEach { tokenType ->
+            for (tokenType in TokenType.values().filter { it.name != "UNKNOWN" }) {
                 // get the token prototype
                 val prototype = mLang.getTokenPrototype(tokenType) ?: throw NoTokenTypeException()
 
@@ -38,12 +41,21 @@ class Compiler(language: Language) {
                     pointer += matchedString.length
                     allTokenTypesFailed = false
                     ret.add(Token(tokenType, matchedString, prototype.fontStyle))
+                    break
+                }
+                // not matched
+                else {
+                    if (matchedString.length > longestFailedMatchedString.length)
+                        longestFailedMatchedString = matchedString
                 }
             }
 
             // if all token types failed
-            if (allTokenTypesFailed)
-                throw LexemeAnalysisException("Unknown token type.")
+            if (allTokenTypesFailed) {
+                pointer += longestFailedMatchedString.length
+                ret.add(Token(TokenType.UNKNOWN, longestFailedMatchedString, TokenPrototype.unknownTokenFontStyle))
+                // throw LexemeAnalysisException("Unknown token type.")
+            }
         }
 
         return ret
