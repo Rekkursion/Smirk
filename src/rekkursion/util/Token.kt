@@ -90,10 +90,8 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
                         else false
                     }
                     else if (outgoingEdge.type == EdgeType.ACCEPTABLE_SYMBOLS) {
-                        if ("\\s+".toRegex().matches(chStr) || predefinedOperatorSymbols.contains(chStr)) {
-                            curState = outgoingEdge.dstState
-                            true
-                        }
+                        if ("\\s+".toRegex().matches(chStr) || predefinedOperatorSymbols.contains(chStr))
+                            return Pair(true, texts.substring(0, pointer))
                         else false
                     }
                     else false

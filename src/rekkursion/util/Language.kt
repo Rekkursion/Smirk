@@ -63,7 +63,7 @@ class Language(langName: String) {
         return mCompiler.analyzeLexeme(code)
     }
 
-    // classify the code into tokens
+    // deprecated: classify the code into tokens
     fun classifyIntoTokens(code: String): ArrayList<Token>? {
         val ret = ArrayList<Token>()
         var pointer = 0

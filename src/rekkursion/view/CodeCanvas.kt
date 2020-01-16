@@ -419,7 +419,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         try {
             mTextBuffersAndTokens[mCaretLineIdx].second =
             PreferenceManager.LangPref.getUsedLang()!!.compile(
-                    mTextBuffersAndTokens[mCaretLineIdx].first.toString() + " "
+                    mTextBuffersAndTokens[mCaretLineIdx].first.toString() + "\n"
             )!!
         } catch (e: Exception) {
             println(e.message)
@@ -433,40 +433,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             var caretX = 0
             // iterate every token in each line
             tokens.forEach { token ->
-//                val type = token.type
+                if (token.text != "\n") {
+                    // render text
+                    token.render(mGphCxt, caretX, caretY)
 
-                // render text
-                token.render(mGphCxt, caretX, caretY)
-
-                // update the caret of x-axis
-                caretX += token.text.length
-
-                // ^[\\s+]
-//                if (type == TokenType.SPACE) {
-//                    var first = true
-//                    token.text.split("\n").forEach { sp ->
-//                        // switch to the new line
-//                        if (!first) {
-//                            ++caretY
-//                            caretX = 0
-//                        }
-//
-//                        // render space
-//                        if (sp.isNotEmpty()) {
-//                            token.render(mGphCxt, caretX, caretY, sp)
-//                            caretX += sp.length
-//                        }
-//                        first = false
-//                    }
-//                }
-//                // other cases
-//                else {
-//                    // render text
-//                    token.render(mGphCxt, caretX, caretY)
-//
-//                    // update the caret of x-axis
-//                    caretX += token.text.length
-//                }
+                    // update the caret of x-axis
+                    caretX += token.text.length
+                }
             }
 
             // move the caret-y
