@@ -55,11 +55,15 @@ object PreferenceManager {
         private const val BASIC_CARET_WIDTH = 1.0
         private const val BASIC_LINE_START_OFFSET = 3.0
 
+        /* ========== */
+
         // the ratio of the editor font size
         private var mEditorFontSizeRatio = 1.0
         var editorFontSizeRatio
             get() = mEditorFontSizeRatio
             set(value) { mEditorFontSizeRatio = value }
+
+        /* ========== */
 
         // get the true character width
         val charW get() = BASIC_CHARA_WIDTH * mEditorFontSizeRatio
@@ -70,11 +74,20 @@ object PreferenceManager {
         // get the true line start offset
         val lineStartOffset get() = BASIC_LINE_START_OFFSET * mEditorFontSizeRatio
 
+        /* ========== */
+
         // step size when scrolling the editor
         private var mEditorScrollingStepSize = lineH * 3.0
         var editorScrollingStepSize
             get() = mEditorScrollingStepSize
             set(value) { mEditorScrollingStepSize = value }
+
+        /* ========== */
+
+        private var mLineNumberAreaWidth = 100.0
+        var lineNumberAreaWidth
+            get() = mLineNumberAreaWidth
+            set(value) { mLineNumberAreaWidth = value }
     }
 
     // language preference
@@ -157,7 +170,7 @@ object PreferenceManager {
                             arrayOf(
                                     "^\'.\'".toRegex()
                             ),
-                            FontStyle.Builder().setFontColor(Color.FORESTGREEN).create()
+                            FontStyle.Builder().setFontColor(Color.GREENYELLOW).create()
                     ))
                     // operator
                     .addTokenPrototype(TokenPrototype(
@@ -169,7 +182,7 @@ object PreferenceManager {
                                     "^\\*\\*".toRegex(),
                                     "^[\\+\\-\\*\\/%&\\|\\^=\\!]=".toRegex()
                             ),
-                            FontStyle.Builder().setFontColor(Color.MEDIUMPURPLE).create()
+                            FontStyle.Builder().setFontColor(Color.PEACHPUFF).create()
                     ))
                     // floating point
                     .addTokenPrototype(TokenPrototype(
@@ -194,6 +207,16 @@ object PreferenceManager {
                                     "^\\s+".toRegex()
                             ),
                             FontStyle.Builder().create()
+                    ))
+                    // unknown
+                    .addTokenPrototype(TokenPrototype(
+                            TokenType.UNKNOWN,
+                            arrayOf(),
+                            FontStyle.Builder()
+                                    .setFontColor(Color.WHITE)
+                                    .setBgColor(Color.color(0.3, 0.3, 0.3, 0.6))
+                                    .setStyle(isUnderlined = true, underlineColor = Color.RED)
+                                    .create()
                     ))
                     .create()
             // endregion

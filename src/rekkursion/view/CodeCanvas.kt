@@ -48,10 +48,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // the point when the mouse is down
     private var mMouseDownPt: Point2D? = null
 
-    // get the graphics location of the caret
-//    private val mGraphicsLocationOfCaret: Point2D
-//        get() = Point2D(mCaretOffset * CHARA_WIDTH, mCaretLineIdx * LINE_HEIGHT)
-
     // constructor
     init {
         mTextBuffersAndTokens.add(MutablePair(StringBuffer(), arrayListOf()))
@@ -412,19 +408,32 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // render the text
     private fun renderText() {
-        val lineH = PreferenceManager.EditorPref.lineH
-        val lineStartOffset = PreferenceManager.EditorPref.lineStartOffset
-
         // do lexeme analysis
         try {
+            // analyze the current line
             mTextBuffersAndTokens[mCaretLineIdx].second =
-            PreferenceManager.LangPref.getUsedLang()!!.compile(
-                    mTextBuffersAndTokens[mCaretLineIdx].first.toString() + "\n"
-            )!!
+                    PreferenceManager.LangPref.getUsedLang()!!.compile(
+                            mTextBuffersAndTokens[mCaretLineIdx].first.toString() + "\n"
+                    )!!
+
+            // analyze the previous line
+            if (mCaretLineIdx > 0) {
+                mTextBuffersAndTokens[mCaretLineIdx - 1].second =
+                        PreferenceManager.LangPref.getUsedLang()!!.compile(
+                                mTextBuffersAndTokens[mCaretLineIdx - 1].first.toString() + "\n"
+                        )!!
+            }
+
+            // analyze the next line
+            if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
+                mTextBuffersAndTokens[mCaretLineIdx + 1].second =
+                        PreferenceManager.LangPref.getUsedLang()!!.compile(
+                                mTextBuffersAndTokens[mCaretLineIdx + 1].first.toString() + "\n"
+                        )!!
+            }
         } catch (e: Exception) {
             println(e.message)
         }
-        val tokens: ArrayList<Token> = mTextBuffersAndTokens[mCaretLineIdx].second
 
         // render all of the tokens
         var caretY = 0
@@ -460,7 +469,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         mGphCxt?.fill = Color.WHITESMOKE
         mGphCxt?.fillRect(
-                mCaretOffset * charW - halfOfCaretWidth + PreferenceManager.EditorPref.lineStartOffset,
+                mCaretOffset * charW - halfOfCaretWidth +
+                        PreferenceManager.EditorPref.lineStartOffset +
+                        PreferenceManager.EditorPref.lineNumberAreaWidth,
                 mCaretLineIdx * PreferenceManager.EditorPref.lineH,
                 caretW,
                 PreferenceManager.EditorPref.lineH

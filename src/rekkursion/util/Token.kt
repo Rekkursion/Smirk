@@ -133,17 +133,6 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
 
     // get the state-machine builder
     fun getStateMachineBuilder(): StateMachine.Builder = mStateMachine.getBuilder()
-
-    /* ===================================================================== */
-
-    // static scope
-    companion object {
-        val unknownTokenFontStyle = FontStyle.Builder()
-                .setFontColor(Color.WHITE)
-                .setBgColor(Color.color(0.5, 0.5, 0.5, 0.5))
-                .setStyle(isUnderlined = true, underlineColor = Color.RED)
-                .create()
-    }
 }
 
 /* ===================================================================== */
@@ -164,12 +153,13 @@ class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {
 
     // render this token
     fun render(gphCxt: GraphicsContext?, caretX: Int, caretY: Int, partialText: String = mText) {
-        val lineStartOffset = PreferenceManager.EditorPref.lineStartOffset
+        val offsetX =
+                PreferenceManager.EditorPref.lineStartOffset + PreferenceManager.EditorPref.lineNumberAreaWidth
 
         // render back?ground
         gphCxt?.fill = mBasicFontStyle.bgColor
         gphCxt?.fillRect(
-                caretX * PreferenceManager.EditorPref.charW + lineStartOffset,
+                caretX * PreferenceManager.EditorPref.charW + offsetX,
                 caretY * PreferenceManager.EditorPref.lineH,
                 partialText.length * PreferenceManager.EditorPref.charW,
                 PreferenceManager.EditorPref.lineH
@@ -179,14 +169,14 @@ class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {
         gphCxt?.fill = mBasicFontStyle.fontColor
         gphCxt?.fillText(
                 partialText,
-                caretX * PreferenceManager.EditorPref.charW + lineStartOffset,
+                caretX * PreferenceManager.EditorPref.charW + offsetX,
                 (caretY + 1) * PreferenceManager.EditorPref.lineH - 5
         )
 
         // render underline
         gphCxt?.fill = mBasicFontStyle.underlineColor
         gphCxt?.fillRect(
-                caretX * PreferenceManager.EditorPref.charW + lineStartOffset,
+                caretX * PreferenceManager.EditorPref.charW + offsetX,
                 (caretY + 1) * PreferenceManager.EditorPref.lineH - 2.5,
                 partialText.length * PreferenceManager.EditorPref.charW,
                 1.0

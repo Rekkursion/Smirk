@@ -53,7 +53,7 @@ class Compiler(language: Language) {
             // if all token types failed
             if (allTokenTypesFailed) {
                 pointer += longestFailedMatchedString.length
-                ret.add(Token(TokenType.UNKNOWN, longestFailedMatchedString, TokenPrototype.unknownTokenFontStyle))
+                ret.add(Token(TokenType.UNKNOWN, longestFailedMatchedString, mLang.getTokenPrototype(TokenType.UNKNOWN)!!.fontStyle))
                 // throw LexemeAnalysisException("Unknown token type.")
             }
         }
