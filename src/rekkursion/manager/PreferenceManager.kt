@@ -100,8 +100,8 @@ object PreferenceManager {
 
         /* ========== */
 
-        // region
-        private var mSelectionClr: Color = Color.color(33 / 255.0, 66 / 255.0, 111 / 255.0)
+        // region the color of selection
+        private var mSelectionClr: Color = Color.color(23 / 255.0, 76 / 255.0, 111 / 255.0)
         var selectionClr
             get() = mSelectionClr
             set(value) { mSelectionClr = value }
@@ -162,6 +162,19 @@ object PreferenceManager {
                 get() = mLineNumberOffsetX
                 set(value) { mLineNumberOffsetX = value }
             // endregion
+        }
+
+        /* ========== */
+
+        // some settings about typing operations
+        object Typing {
+            // the symmetric symbols
+            val symmetricSymbols = hashMapOf<String, String>(
+                    "(" to ")",
+                    "[" to "]",
+                    "{" to "}",
+                    "/*" to "*/"
+            )
         }
     }
 

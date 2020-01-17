@@ -143,6 +143,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         if (chCode == KeyCode.F5) {
         }
 
+        /* ====== */
+
         // left arrow (ctrl-able, shift-able)
         else if (chCode == KeyCode.LEFT) {
             // ctrl + left: move a word to left
@@ -303,10 +305,10 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             }
 
             // deal w/ selection
-            if (mCaretOffset != origCaretOffset || mCaretLineIdx != origLineIdx) {
-                manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
-                render()
-            }
+            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+
+            // re-render
+            render()
         }
 
         // home (ctrl-able, shift-able)
@@ -329,11 +331,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             }
 
             // deal w/ selection
-            if (mCaretOffset != origCaretOffset || mCaretLineIdx != origLineIdx) {
-                manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
-                render()
-            }
+            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+
+            // re-render
+            render()
         }
+
+        /* ====== */
 
         // back-space
         else if (chCode == KeyCode.BACK_SPACE) {
@@ -374,18 +378,34 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             }
         }
 
+        /* ====== */
+
         // visible character & white-space (shift-able)
         else if (chCode.code >= 32) {
+            // get the visible character
+            val vCh = getVisibleChar(ch)
+
             // append to the string-buffer
-            mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, getVisibleChar(ch))
+            mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, vCh)
 
             // update the caret offset
             ++mCaretOffset
             mOrigestCaretOffset = mCaretOffset
 
+            // if the character is a symmetric character -> add the symmetric one
+            if (PreferenceManager.EditorPref.Typing.symmetricSymbols.containsKey(vCh.toString())) {
+                // append to the string-buffer
+                mTextBuffersAndTokens[mCaretLineIdx].first.insert(
+                        mCaretOffset,
+                        PreferenceManager.EditorPref.Typing.symmetricSymbols[vCh.toString()]
+                )
+            }
+
             // re-render
             render()
         }
+
+        /* ====== */
 
         // enter (shift-able)
         else if (chCode == KeyCode.ENTER) {
@@ -417,6 +437,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             render()
         }
 
+        /* ====== */
+
         // tab
         else if (chCode == KeyCode.TAB) {
             // append to the string-buffer
@@ -429,6 +451,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // re-render
             render()
         }
+
+        /* ====== */
 
         // modifier: ctrl
         else if (chCode == KeyCode.CONTROL) {
