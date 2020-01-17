@@ -21,7 +21,7 @@ import kotlin.math.roundToInt
 
 class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canvas(mWidth, mHeight) {
     // the camera
-    private val mCamera: Camera? = null
+    private val mCamera = Camera(width = mWidth, height = mHeight)
 
     // the graphics context
     private var mGphCxt: GraphicsContext? = null
@@ -143,7 +143,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         if (chCode == KeyCode.F5) {
         }
 
-        /* ====== */
+        /* ===================================================================== */
 
         // left arrow (ctrl-able, shift-able)
         else if (chCode == KeyCode.LEFT) {
@@ -264,6 +264,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 // deal w/ selection
                 manageSelectionWithAnInterval(mCaretLineIdx + 1, origCaretOffset, mCaretLineIdx, mCaretOffset)
 
+                // deal w/ the camera
+                manageCamera()
+
                 // re-render
                 render()
             }
@@ -279,6 +282,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
                 // deal w/ selection
                 manageSelectionWithAnInterval(mCaretLineIdx - 1, origCaretOffset, mCaretLineIdx, mCaretOffset)
+
+                // deal w/ the camera
+                manageCamera()
 
                 // re-render
                 render()
@@ -307,6 +313,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // deal w/ selection
             manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
 
+            // deal w/ the camera
+            manageCamera()
+
             // re-render
             render()
         }
@@ -333,11 +342,14 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // deal w/ selection
             manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
 
+            // deal w/ the camera
+            manageCamera()
+
             // re-render
             render()
         }
 
-        /* ====== */
+        /* ===================================================================== */
 
         // back-space
         else if (chCode == KeyCode.BACK_SPACE) {
@@ -346,7 +358,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset - 1)
                 --mCaretOffset
                 mOrigestCaretOffset = mCaretOffset
-                render()
             }
             // delete a '\n'
             else {
@@ -356,9 +367,14 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                     mTextBuffersAndTokens[mCaretLineIdx - 1].first.append(mTextBuffersAndTokens[mCaretLineIdx].first.toString())
                     mTextBuffersAndTokens.removeAt(mCaretLineIdx)
                     --mCaretLineIdx
-                    render()
                 }
             }
+
+            // deal w/ the camera
+            manageCamera()
+
+            // re-render
+            render()
         }
 
         // delete
@@ -366,46 +382,21 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // delete a single character behind the caret
             if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
                 mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset)
-                render()
             }
             // delete a '\n'
             else {
                 if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
                     mTextBuffersAndTokens[mCaretLineIdx].first.append(mTextBuffersAndTokens[mCaretLineIdx + 1].first.toString())
                     mTextBuffersAndTokens.removeAt(mCaretLineIdx + 1)
-                    render()
                 }
             }
-        }
 
-        /* ====== */
-
-        // visible character & white-space (shift-able)
-        else if (chCode.code >= 32) {
-            // get the visible character
-            val vCh = getVisibleChar(ch)
-
-            // append to the string-buffer
-            mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, vCh)
-
-            // update the caret offset
-            ++mCaretOffset
-            mOrigestCaretOffset = mCaretOffset
-
-            // if the character is a symmetric character -> add the symmetric one
-            if (PreferenceManager.EditorPref.Typing.symmetricSymbols.containsKey(vCh.toString())) {
-                // append to the string-buffer
-                mTextBuffersAndTokens[mCaretLineIdx].first.insert(
-                        mCaretOffset,
-                        PreferenceManager.EditorPref.Typing.symmetricSymbols[vCh.toString()]
-                )
-            }
+            // deal w/ the camera
+            manageCamera()
 
             // re-render
             render()
         }
-
-        /* ====== */
 
         // enter (shift-able)
         else if (chCode == KeyCode.ENTER) {
@@ -433,11 +424,39 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mOrigestCaretOffset = mCaretOffset
             ++mCaretLineIdx
 
+            // deal w/ the camera
+            manageCamera()
+
             // re-render
             render()
         }
 
-        /* ====== */
+        /* ===================================================================== */
+
+        // visible character & white-space (shift-able)
+        else if (chCode.code >= 32) {
+            // get the visible character
+            val vCh = getVisibleChar(ch)
+
+            // append to the string-buffer
+            mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, vCh)
+
+            // update the caret offset
+            ++mCaretOffset
+            mOrigestCaretOffset = mCaretOffset
+
+            // if the character is a symmetric character -> add the symmetric one
+            if (PreferenceManager.EditorPref.Typing.symmetricSymbols.containsKey(vCh.toString())) {
+                // append to the string-buffer
+                mTextBuffersAndTokens[mCaretLineIdx].first.insert(
+                        mCaretOffset,
+                        PreferenceManager.EditorPref.Typing.symmetricSymbols[vCh.toString()]
+                )
+            }
+
+            // re-render
+            render()
+        }
 
         // tab
         else if (chCode == KeyCode.TAB) {
@@ -452,7 +471,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             render()
         }
 
-        /* ====== */
+        /* ===================================================================== */
 
         // modifier: ctrl
         else if (chCode == KeyCode.CONTROL) {
@@ -486,6 +505,27 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mSelectionManager.clearSelections()
     }
 
+    // deal w/ the camera
+    private fun manageCamera() {
+        // get the total height to the current line index
+        val totalHeightToLineIdx = (mCaretLineIdx + 1) * PreferenceManager.EditorPref.lineH - mCamera.locY
+
+        // scroll down if the current line is over-flowing (bigger than the editor height)
+        if (totalHeightToLineIdx > PreferenceManager.codeCvsHeight) {
+            val difference = totalHeightToLineIdx - PreferenceManager.codeCvsHeight
+            mCamera.move(0.0, difference)
+        }
+        // scroll up if the current line is under-flowing (smaller than two lines' height)
+        else if (totalHeightToLineIdx < PreferenceManager.EditorPref.lineH * 2.0) {
+            val difference =
+                    if (mCaretLineIdx == 0)
+                        PreferenceManager.EditorPref.lineH - totalHeightToLineIdx
+                    else
+                        PreferenceManager.EditorPref.lineH * 2.0 - totalHeightToLineIdx
+            mCamera.move(0.0, -difference)
+        }
+    }
+
     // render
     private fun render() {
         val lineH = PreferenceManager.EditorPref.lineH
@@ -494,9 +534,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mGphCxt?.fill = PreferenceManager.EditorPref.editorBgClr
         mGphCxt?.fillRect(0.0, 0.0, PreferenceManager.codeCvsWidth, PreferenceManager.codeCvsHeight)
 
-        // render the line hint
+        // render the selected line hint
         mGphCxt?.fill = PreferenceManager.EditorPref.selectedLineHintClr
-        mGphCxt?.fillRect(0.0, mCaretLineIdx * lineH, mWidth, lineH)
+        mGphCxt?.fillRect(-mCamera.locX, mCaretLineIdx * lineH - mCamera.locY, mWidth, lineH)
 
         // render the text
         renderText()
@@ -546,7 +586,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             tokens.forEach { token ->
                 if (token.text != "\n") {
                     // render text
-                    token.renderBackground(mGphCxt, caretX, caretY)
+                    token.renderBackground(mGphCxt, mCamera, caretX, caretY)
 
                     // update the caret of x-axis
                     caretX += token.text.length
@@ -559,7 +599,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         /* ====== */
 
-        mSelectionManager.renderSelection(mGphCxt)
+        mSelectionManager.renderSelection(mGphCxt, mCamera)
 
         /* ====== */
 
@@ -571,7 +611,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             tokens.forEach { token ->
                 if (token.text != "\n") {
                     // render text
-                    token.render(mGphCxt, caretX, caretY)
+                    token.render(mGphCxt, mCamera, caretX, caretY)
 
                     // update the caret of x-axis
                     caretX += token.text.length
@@ -593,8 +633,10 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mGphCxt?.fillRect(
                 mCaretOffset * charW - halfOfCaretWidth +
                         PreferenceManager.EditorPref.lineStartOffsetX +
-                        PreferenceManager.EditorPref.LineNumberArea.width,
-                mCaretLineIdx * PreferenceManager.EditorPref.lineH,
+                        PreferenceManager.EditorPref.LineNumberArea.width -
+                        mCamera.locX,
+                mCaretLineIdx * PreferenceManager.EditorPref.lineH -
+                        mCamera.locY,
                 caretW,
                 PreferenceManager.EditorPref.lineH
         )
@@ -630,9 +672,11 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 continue
             mGphCxt?.fillText(
                     " ".repeat(maxDigitLen - y.toString().length) + y.toString(),
-                    PreferenceManager.EditorPref.LineNumberArea.numberOffsetX,
+                    PreferenceManager.EditorPref.LineNumberArea.numberOffsetX -
+                            mCamera.locX,
                     (y + 1) * PreferenceManager.EditorPref.lineH -
-                            PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize,
+                            PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize -
+                            mCamera.locY,
                     PreferenceManager.EditorPref.LineNumberArea.width
             )
         }
@@ -641,9 +685,11 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mGphCxt?.fill = PreferenceManager.EditorPref.LineNumberArea.selectedFontClr
         mGphCxt?.fillText(
                 " ".repeat(maxDigitLen - mCaretLineIdx.toString().length) + mCaretLineIdx.toString(),
-                PreferenceManager.EditorPref.LineNumberArea.numberOffsetX,
+                PreferenceManager.EditorPref.LineNumberArea.numberOffsetX -
+                        mCamera.locX,
                 (mCaretLineIdx + 1) * PreferenceManager.EditorPref.lineH -
-                        PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize,
+                        PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize -
+                        mCamera.locY,
                 PreferenceManager.EditorPref.LineNumberArea.width
         )
     }

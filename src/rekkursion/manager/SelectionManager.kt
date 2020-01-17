@@ -1,6 +1,7 @@
 package rekkursion.manager
 
 import javafx.scene.canvas.GraphicsContext
+import rekkursion.util.Camera
 import rekkursion.util.tool.MutablePair
 import rekkursion.util.tool.TextInterval
 import kotlin.math.abs
@@ -30,7 +31,7 @@ class SelectionManager {
     }
 
     // render the selection effect
-    fun renderSelection(gphCxt: GraphicsContext?) {
+    fun renderSelection(gphCxt: GraphicsContext?, camera: Camera) {
         // if main-selection is NOT null
         mMainSelection?.let { mainSelection ->
             // get the offset-x of typing area
@@ -50,8 +51,8 @@ class SelectionManager {
                 val selectionLen = abs(startLineOffset - endLineOffset)
                 val smaller = min(startLineOffset, endLineOffset)
                 gphCxt?.fillRect(
-                        smaller * PreferenceManager.EditorPref.charW + offsetX,
-                        startLineIdx * PreferenceManager.EditorPref.lineH,
+                        smaller * PreferenceManager.EditorPref.charW + offsetX - camera.locX,
+                        startLineIdx * PreferenceManager.EditorPref.lineH - camera.locY,
                         selectionLen * PreferenceManager.EditorPref.charW,
                         PreferenceManager.EditorPref.lineH
                 )
@@ -60,10 +61,11 @@ class SelectionManager {
             // has multiple lines
             else {
                 /* sm = smaller, bg = bigger */
-                var smLineIdx: Int
-                var smLineOffset: Int
-                var bgLineIdx: Int
-                var bgLineOffset: Int
+                // region determine and find out the smaller one & bigger one
+                val smLineIdx: Int
+                val smLineOffset: Int
+                val bgLineIdx: Int
+                val bgLineOffset: Int
                 if (startLineIdx < endLineIdx || (startLineIdx == endLineIdx && startLineOffset < endLineOffset)) {
                     smLineIdx = startLineIdx
                     smLineOffset = startLineOffset
@@ -76,6 +78,7 @@ class SelectionManager {
                     bgLineIdx = startLineIdx
                     bgLineOffset = startLineOffset
                 }
+                // endregion
 
                 // iterate from smallest line to highest line
                 for (idx in smLineIdx..bgLineIdx) {
@@ -97,8 +100,8 @@ class SelectionManager {
                     }
 
                     gphCxt?.fillRect(
-                            x,
-                            idx * PreferenceManager.EditorPref.lineH,
+                            x - camera.locX,
+                            idx * PreferenceManager.EditorPref.lineH - camera.locY,
                             w,
                             PreferenceManager.EditorPref.lineH
                     )

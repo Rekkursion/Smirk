@@ -152,7 +152,7 @@ class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {
     val basicFontStyle get() = mBasicFontStyle
 
     // render this token
-    fun render(gphCxt: GraphicsContext?, caretX: Int, caretY: Int, partialText: String = mText) {
+    fun render(gphCxt: GraphicsContext?, camera: Camera, caretX: Int, caretY: Int, partialText: String = mText) {
         val offsetX =
                 PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.LineNumberArea.width
 
@@ -164,31 +164,32 @@ class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {
         gphCxt?.font = PreferenceManager.EditorPref.font
         gphCxt?.fillText(
                 partialText,
-                caretX * PreferenceManager.EditorPref.charW + offsetX,
+                caretX * PreferenceManager.EditorPref.charW + offsetX - camera.locX,
                 (caretY + 1) * PreferenceManager.EditorPref.lineH -
-                        PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize
+                        PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize -
+                        camera.locY
         )
 
         // render underline
         gphCxt?.fill = mBasicFontStyle.underlineColor
         gphCxt?.fillRect(
-                caretX * PreferenceManager.EditorPref.charW + offsetX,
-                (caretY + 1) * PreferenceManager.EditorPref.lineH - 2.5,
+                caretX * PreferenceManager.EditorPref.charW + offsetX - camera.locX,
+                (caretY + 1) * PreferenceManager.EditorPref.lineH - 2.5 - camera.locY,
                 partialText.length * PreferenceManager.EditorPref.charW,
                 1.0
         )
     }
 
     // render the background of this token
-    fun renderBackground(gphCxt: GraphicsContext?, caretX: Int, caretY: Int, partialText: String = mText) {
+    fun renderBackground(gphCxt: GraphicsContext?, camera: Camera, caretX: Int, caretY: Int, partialText: String = mText) {
         val offsetX =
                 PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.LineNumberArea.width
 
         // render background
         gphCxt?.fill = mBasicFontStyle.bgColor
         gphCxt?.fillRect(
-                caretX * PreferenceManager.EditorPref.charW + offsetX,
-                caretY * PreferenceManager.EditorPref.lineH,
+                caretX * PreferenceManager.EditorPref.charW + offsetX - camera.locX,
+                caretY * PreferenceManager.EditorPref.lineH - camera.locY,
                 partialText.length * PreferenceManager.EditorPref.charW,
                 PreferenceManager.EditorPref.lineH
         )

@@ -9,10 +9,25 @@ class Camera(
         width: Double = PreferenceManager.codeCvsWidth,
         height: Double = PreferenceManager.codeCvsHeight) {
 
+    /* ===================================================================== */
+
+    // x-location
     private var mLocX = locX
+    val locX get() = mLocX
+
+    // y-location
     private var mLocY = locY
+    val locY get() = mLocY
+
+    // width
     private var mWidth = width
+    val width = mWidth
+
+    // height
     private var mHeight = height
+    val height = mHeight
+
+    /* ===================================================================== */
 
     // move the camera by the offset
     fun move(offsetX: Double, offsetY: Double): Point2D
