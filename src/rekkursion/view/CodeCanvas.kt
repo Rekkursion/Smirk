@@ -179,9 +179,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
                     // deal w/ selection
                     manageSelectionWithAnInterval(mCaretLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
-
-                    // re-render
-                    render()
                 }
             }
             // left-only: move a single character to left
@@ -192,9 +189,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
                     // deal w/ selection
                     manageSelectionWithAnInterval(mCaretLineIdx, mCaretOffset + 1, mCaretLineIdx, mCaretOffset)
-
-                    // re-render
-                    render()
                 }
             }
         }
@@ -233,9 +227,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
                     // deal w/ selection
                     manageSelectionWithAnInterval(mCaretLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
-
-                    // re-render
-                    render()
                 }
             }
             // move a single character to right
@@ -246,9 +237,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
                     // deal w/ selection
                     manageSelectionWithAnInterval(mCaretLineIdx, mCaretOffset - 1, mCaretLineIdx, mCaretOffset)
-
-                    // re-render
-                    render()
                 }
             }
         }
@@ -263,12 +251,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
                 // deal w/ selection
                 manageSelectionWithAnInterval(mCaretLineIdx + 1, origCaretOffset, mCaretLineIdx, mCaretOffset)
-
-                // deal w/ the camera
-                manageCamera()
-
-                // re-render
-                render()
             }
         }
 
@@ -282,12 +264,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
                 // deal w/ selection
                 manageSelectionWithAnInterval(mCaretLineIdx - 1, origCaretOffset, mCaretLineIdx, mCaretOffset)
-
-                // deal w/ the camera
-                manageCamera()
-
-                // re-render
-                render()
             }
         }
 
@@ -312,12 +288,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
             // deal w/ selection
             manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
-
-            // deal w/ the camera
-            manageCamera()
-
-            // re-render
-            render()
         }
 
         // home (ctrl-able, shift-able)
@@ -341,12 +311,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
             // deal w/ selection
             manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
-
-            // deal w/ the camera
-            manageCamera()
-
-            // re-render
-            render()
         }
 
         /* ===================================================================== */
@@ -369,12 +333,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                     --mCaretLineIdx
                 }
             }
-
-            // deal w/ the camera
-            manageCamera()
-
-            // re-render
-            render()
         }
 
         // delete
@@ -390,12 +348,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                     mTextBuffersAndTokens.removeAt(mCaretLineIdx + 1)
                 }
             }
-
-            // deal w/ the camera
-            manageCamera()
-
-            // re-render
-            render()
         }
 
         // enter (shift-able)
@@ -423,12 +375,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mCaretOffset = 0
             mOrigestCaretOffset = mCaretOffset
             ++mCaretLineIdx
-
-            // deal w/ the camera
-            manageCamera()
-
-            // re-render
-            render()
         }
 
         /* ===================================================================== */
@@ -453,9 +399,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                         PreferenceManager.EditorPref.Typing.symmetricSymbols[vCh.toString()]
                 )
             }
-
-            // re-render
-            render()
         }
 
         // tab
@@ -466,9 +409,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // update the caret offset
             mCaretOffset += 4
             mOrigestCaretOffset = mCaretOffset
-
-            // re-render
-            render()
         }
 
         /* ===================================================================== */
@@ -481,6 +421,17 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // modifier: shift
         else if (chCode == KeyCode.SHIFT) {
             mIsShiftPressed = true
+        }
+
+        /* ===================================================================== */
+
+        // deal w/ the camera and render the editor
+        if (chCode != KeyCode.CONTROL && chCode != KeyCode.SHIFT) {
+            // deal w/ the camera
+            manageCamera()
+
+            // re-render
+            render()
         }
     }
 
@@ -524,6 +475,26 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                         PreferenceManager.EditorPref.lineH * 2.0 - totalHeightToLineIdx
             mCamera.move(0.0, -difference)
         }
+
+        /**/
+
+        // the start x-offset of texts
+        val offsetX =
+                PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.LineNumberArea.width
+
+        // get the total width to the current caret offset
+        val totalWidthToCaretOffset = offsetX + mCaretOffset * PreferenceManager.EditorPref.charW - mCamera.locX
+
+        // scroll right if the current caret offset is over-flowing (bigger than the editor width)
+        if (totalWidthToCaretOffset > PreferenceManager.codeCvsWidth - PreferenceManager.EditorPref.lineStartOffsetX) {
+            val difference = totalWidthToCaretOffset - (PreferenceManager.codeCvsWidth - PreferenceManager.EditorPref.lineStartOffsetX)
+            mCamera.move(difference, 0.0)
+        }
+        // scroll left if the current caret offset is under-flowing (smaller than offset-x)
+        else if (totalWidthToCaretOffset < offsetX) {
+            val difference = offsetX - totalWidthToCaretOffset
+            mCamera.move(-difference, 0.0)
+        }
     }
 
     // render
@@ -536,7 +507,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // render the selected line hint
         mGphCxt?.fill = PreferenceManager.EditorPref.selectedLineHintClr
-        mGphCxt?.fillRect(-mCamera.locX, mCaretLineIdx * lineH - mCamera.locY, mWidth, lineH)
+        mGphCxt?.fillRect(-mCamera.locX, mCaretLineIdx * lineH - mCamera.locY, mWidth + mCamera.locX, lineH)
 
         // render the text
         renderText()
