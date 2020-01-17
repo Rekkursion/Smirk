@@ -6,11 +6,9 @@ import javafx.scene.canvas.GraphicsContext
 import javafx.scene.input.KeyCode
 import javafx.scene.paint.Color
 import javafx.scene.text.Font
-import rekkursion.exception.NoTokenTypeException
 import rekkursion.manager.PreferenceManager
 import rekkursion.util.Camera
 import rekkursion.util.Token
-import rekkursion.util.TokenType
 import rekkursion.util.tool.MutablePair
 import java.lang.Exception
 
@@ -48,7 +46,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // the point when the mouse is down
     private var mMouseDownPt: Point2D? = null
 
-    // constructor
+    // for primary constructor
     init {
         mTextBuffersAndTokens.add(MutablePair(StringBuffer(), arrayListOf()))
 
@@ -61,7 +59,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // initialize the graphics-context
     private fun initGraphicsContext() {
         mGphCxt = graphicsContext2D
-        mGphCxt!!.font = Font.font("Consolas", 20.0)
+        mGphCxt?.font = PreferenceManager.EditorPref.font
 
         render()
     }
@@ -392,11 +390,11 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         val lineH = PreferenceManager.EditorPref.lineH
 
         // render the background
-        mGphCxt?.fill = PreferenceManager.codeCanvasBgColor
+        mGphCxt?.fill = PreferenceManager.EditorPref.editorBgClr
         mGphCxt?.fillRect(0.0, 0.0, PreferenceManager.codeCvsWidth, PreferenceManager.codeCvsHeight)
 
         // render the line hint
-        mGphCxt?.fill = PreferenceManager.lineHintColor
+        mGphCxt?.fill = PreferenceManager.EditorPref.selectedLineHintClr
         mGphCxt?.fillRect(0.0, mCaretLineIdx * lineH, mWidth, lineH)
 
         // render the text
@@ -404,6 +402,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // render the caret
         renderCaret()
+
+        // render the line number area
+        renderLineNumberArea()
     }
 
     // render the text
@@ -454,11 +455,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // move the caret-y
             ++caretY
         }
-
-        // render the texts
-//        mGphCxt?.fill = Paint.valueOf("white")
-//        for (k in mTextBuffers.indices)
-//            mGphCxt?.fillText(mTextBuffers[k].toString(), lineStartOffset, (k + 1) * lineH - 5)
     }
 
     // render the caret
@@ -470,13 +466,62 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mGphCxt?.fill = Color.WHITESMOKE
         mGphCxt?.fillRect(
                 mCaretOffset * charW - halfOfCaretWidth +
-                        PreferenceManager.EditorPref.lineStartOffset +
+                        PreferenceManager.EditorPref.lineStartOffsetX +
                         PreferenceManager.EditorPref.lineNumberAreaWidth,
                 mCaretLineIdx * PreferenceManager.EditorPref.lineH,
                 caretW,
                 PreferenceManager.EditorPref.lineH
         )
     }
+
+    // render the line number area
+    private fun renderLineNumberArea() {
+        // render the background
+        mGphCxt?.fill = PreferenceManager.EditorPref.lineNumberAreaBgClr
+        mGphCxt?.fillRect(
+                0.0,
+                0.0,
+                PreferenceManager.EditorPref.lineNumberAreaWidth,
+                PreferenceManager.codeCvsHeight
+        )
+
+        // render the vertical-line
+        mGphCxt?.fill = PreferenceManager.EditorPref.lineNumberAreaFontClr
+        mGphCxt?.fillRect(
+                PreferenceManager.EditorPref.lineNumberAreaWidth - (PreferenceManager.EditorPref.verticalLineWidth / 2.0),
+                0.0,
+                PreferenceManager.EditorPref.verticalLineWidth,
+                PreferenceManager.codeCvsHeight
+        )
+
+        // render the non-selected line numbers
+        val maxDigitLen = (mTextBuffersAndTokens.size - 1).toString().length
+        mGphCxt?.fill = PreferenceManager.EditorPref.lineNumberAreaFontClr
+        mGphCxt?.font = PreferenceManager.EditorPref.font
+        for (y in 0 until mTextBuffersAndTokens.size) {
+            if (y == mCaretLineIdx)
+                continue
+            mGphCxt?.fillText(
+                    " ".repeat(maxDigitLen - y.toString().length) + y.toString(),
+                    PreferenceManager.EditorPref.lineNumberOffsetX,
+                    (y + 1) * PreferenceManager.EditorPref.lineH -
+                            PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize,
+                    PreferenceManager.EditorPref.lineNumberAreaWidth
+            )
+        }
+
+        // render the selected line number
+        mGphCxt?.fill = PreferenceManager.EditorPref.lineNumberAreaSelectedFontClr
+        mGphCxt?.fillText(
+                " ".repeat(maxDigitLen - mCaretLineIdx.toString().length) + mCaretLineIdx.toString(),
+                PreferenceManager.EditorPref.lineNumberOffsetX,
+                (mCaretLineIdx + 1) * PreferenceManager.EditorPref.lineH -
+                        PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize,
+                PreferenceManager.EditorPref.lineNumberAreaWidth
+        )
+    }
+
+    /* ===================================================================== */
 
     // static scope
     companion object {

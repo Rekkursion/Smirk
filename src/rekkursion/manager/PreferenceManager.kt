@@ -1,6 +1,7 @@
 package rekkursion.manager
 
 import javafx.scene.paint.Color
+import javafx.scene.text.Font
 import rekkursion.util.*
 import rekkursion.util.statemachine.edge.EdgeType
 import rekkursion.util.statemachine.state.State
@@ -34,60 +35,127 @@ object PreferenceManager {
         set(value) { mCodeCvsH = value }
     // endregion
 
-    // region color related
-    // color of code-canvas background
-    private var mCodeCvsBgClr: Color = Color.color(0.3, 0.3, 0.3)
-    var codeCanvasBgColor
-        get() = mCodeCvsBgClr
-        set(value) { mCodeCvsBgClr = value }
-
-    // color of the current line hint of the code-canvas
-    private var mLineHintClr: Color = Color.color(0.4, 0.4, 0.4)
-    var lineHintColor
-        get() = mLineHintClr
-        set(value) { mLineHintClr = value }
-    // endregion
-
     // editor preference
     object EditorPref {
         private const val BASIC_CHARA_WIDTH = 11.0
-        private const val BASIC_LINE_HEIGHT = 24.0
+        private const val BASIC_LINE_HEIGHT = 26.0
         private const val BASIC_CARET_WIDTH = 1.0
-        private const val BASIC_LINE_START_OFFSET = 3.0
+        private const val BASIC_LINE_START_OFFSET = 8.0
 
         /* ========== */
 
-        // the ratio of the editor font size
+        // region the ratio of the editor font size
         private var mEditorFontSizeRatio = 1.0
         var editorFontSizeRatio
             get() = mEditorFontSizeRatio
             set(value) { mEditorFontSizeRatio = value }
 
-        /* ========== */
-
-        // get the true character width
+        // region get the true character width
         val charW get() = BASIC_CHARA_WIDTH * mEditorFontSizeRatio
         // get the true line height
         val lineH get() = BASIC_LINE_HEIGHT * mEditorFontSizeRatio
         // get the true caret width
         val caretW get() = BASIC_CARET_WIDTH * mEditorFontSizeRatio
         // get the true line start offset
-        val lineStartOffset get() = BASIC_LINE_START_OFFSET * mEditorFontSizeRatio
+        val lineStartOffsetX get() = BASIC_LINE_START_OFFSET * mEditorFontSizeRatio
+        // get the true font size
+        val fontSize get() = 20.0 * mEditorFontSizeRatio
+        // get the true difference between true line-h and true font-size
+        val differenceBetweenLineHeightAndFontSize get() = lineH - fontSize
+        // endregion
+        // endregion
 
         /* ========== */
 
-        // step size when scrolling the editor
+        // region get the font
+        val font: Font = Font.font("Consolas", fontSize)
+        // endregion
+
+        /* ========== */
+
+        // region the background color of the editor
+        private var mEditorBgClr: Color = Color.color(0.3, 0.3, 0.3)
+        var editorBgClr
+            get() = mEditorBgClr
+            set(value) { mEditorBgClr = value }
+        // endregion
+
+        /* ========== */
+
+        // region the color of the current selected line hint of the editor
+        private var mSelectedLineHintClr: Color = Color.color(0.43, 0.41, 0.39)
+        var selectedLineHintClr
+            get() = mSelectedLineHintClr
+            set(value) { mSelectedLineHintClr = value }
+        // endregion
+
+        /* ========== */
+
+        // region step size when scrolling the editor
         private var mEditorScrollingStepSize = lineH * 3.0
         var editorScrollingStepSize
             get() = mEditorScrollingStepSize
             set(value) { mEditorScrollingStepSize = value }
+        // endregion
 
         /* ========== */
 
-        private var mLineNumberAreaWidth = 100.0
+        // line number area object
+        object LineNumberArea {
+
+        }
+
+        // region the width of line number area
+        private var mLineNumberAreaWidth = 75.0
         var lineNumberAreaWidth
             get() = mLineNumberAreaWidth
             set(value) { mLineNumberAreaWidth = value }
+        // endregion
+
+        /* ========== */
+
+        // region the bg color of line number area
+        private var mLineNumberAreaBgClr: Color = Color.color(0.35, 0.35, 0.35)
+        var lineNumberAreaBgClr
+            get() = mLineNumberAreaBgClr
+            set(value) { mLineNumberAreaBgClr = value }
+        // endregion
+
+        /* ========== */
+
+        // region the font color of line number area
+        private var mLineNumberAreaFontClr: Color = Color.color(0.7, 0.7, 0.7)
+        var lineNumberAreaFontClr
+            get() = mLineNumberAreaFontClr
+            set(value) { mLineNumberAreaFontClr = value }
+        // endregion
+
+        /* ========== */
+
+        // region the selected-line font color of line number area
+        private var mLineNumberAreaSelectedFontClr: Color = Color.color(0.94, 0.94, 0.94)
+        var lineNumberAreaSelectedFontClr
+            get() = mLineNumberAreaSelectedFontClr
+            set(value) { mLineNumberAreaSelectedFontClr = value }
+        // endregion
+
+        /* ========== */
+
+        // region the width of vertical-line which is used to separate the line number area and the typing area
+        private var mVerticalLineWidth = 0.4
+        var verticalLineWidth
+            get() = mVerticalLineWidth
+            set(value) { mVerticalLineWidth = value }
+        // endregion
+
+        /* ========== */
+
+        // region the x-offset of line numbers
+        private var mLineNumberOffsetX = 8.0
+        var lineNumberOffsetX
+            get() = mLineNumberOffsetX
+            set(value) { mLineNumberOffsetX = value }
+        // endregion
     }
 
     // language preference

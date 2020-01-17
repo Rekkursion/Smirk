@@ -1,7 +1,7 @@
 package rekkursion.util
 
 import javafx.scene.canvas.GraphicsContext
-import javafx.scene.paint.Color
+import javafx.scene.text.Font
 import rekkursion.exception.LexemeAnalysisException
 import rekkursion.manager.PreferenceManager
 import rekkursion.util.statemachine.edge.EdgeType
@@ -154,9 +154,9 @@ class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {
     // render this token
     fun render(gphCxt: GraphicsContext?, caretX: Int, caretY: Int, partialText: String = mText) {
         val offsetX =
-                PreferenceManager.EditorPref.lineStartOffset + PreferenceManager.EditorPref.lineNumberAreaWidth
+                PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.lineNumberAreaWidth
 
-        // render back?ground
+        // render background
         gphCxt?.fill = mBasicFontStyle.bgColor
         gphCxt?.fillRect(
                 caretX * PreferenceManager.EditorPref.charW + offsetX,
@@ -167,10 +167,12 @@ class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {
 
         // render text
         gphCxt?.fill = mBasicFontStyle.fontColor
+        gphCxt?.font = PreferenceManager.EditorPref.font
         gphCxt?.fillText(
                 partialText,
                 caretX * PreferenceManager.EditorPref.charW + offsetX,
-                (caretY + 1) * PreferenceManager.EditorPref.lineH - 5
+                (caretY + 1) * PreferenceManager.EditorPref.lineH -
+                        PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize
         )
 
         // render underline
