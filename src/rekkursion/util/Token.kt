@@ -154,16 +154,10 @@ class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {
     // render this token
     fun render(gphCxt: GraphicsContext?, caretX: Int, caretY: Int, partialText: String = mText) {
         val offsetX =
-                PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.lineNumberAreaWidth
+                PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.LineNumberArea.width
 
         // render background
-        gphCxt?.fill = mBasicFontStyle.bgColor
-        gphCxt?.fillRect(
-                caretX * PreferenceManager.EditorPref.charW + offsetX,
-                caretY * PreferenceManager.EditorPref.lineH,
-                partialText.length * PreferenceManager.EditorPref.charW,
-                PreferenceManager.EditorPref.lineH
-        )
+        //renderBackground(gphCxt, caretX, caretY, partialText)
 
         // render text
         gphCxt?.fill = mBasicFontStyle.fontColor
@@ -182,6 +176,21 @@ class Token(type: TokenType, text: String, basicFontStyle: FontStyle) {
                 (caretY + 1) * PreferenceManager.EditorPref.lineH - 2.5,
                 partialText.length * PreferenceManager.EditorPref.charW,
                 1.0
+        )
+    }
+
+    // render the background of this token
+    fun renderBackground(gphCxt: GraphicsContext?, caretX: Int, caretY: Int, partialText: String = mText) {
+        val offsetX =
+                PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.LineNumberArea.width
+
+        // render background
+        gphCxt?.fill = mBasicFontStyle.bgColor
+        gphCxt?.fillRect(
+                caretX * PreferenceManager.EditorPref.charW + offsetX,
+                caretY * PreferenceManager.EditorPref.lineH,
+                partialText.length * PreferenceManager.EditorPref.charW,
+                PreferenceManager.EditorPref.lineH
         )
     }
 

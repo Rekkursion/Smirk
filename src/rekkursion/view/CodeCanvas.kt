@@ -5,8 +5,8 @@ import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
 import javafx.scene.input.KeyCode
 import javafx.scene.paint.Color
-import javafx.scene.text.Font
 import rekkursion.manager.PreferenceManager
+import rekkursion.manager.SelectionManager
 import rekkursion.util.Camera
 import rekkursion.util.Token
 import rekkursion.util.tool.MutablePair
@@ -14,6 +14,7 @@ import java.lang.Exception
 
 import java.util.ArrayList
 import java.util.HashMap
+import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -45,6 +46,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // the point when the mouse is down
     private var mMouseDownPt: Point2D? = null
+
+    // for managing the selections of texts
+    private val mSelectionManager = SelectionManager()
 
     // for primary constructor
     init {
@@ -106,8 +110,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
             if (chCode == KeyCode.CONTROL)
                 mIsCtrlPressed = false
-            else if (chCode == KeyCode.SHIFT)
+            else if (chCode == KeyCode.SHIFT) {
                 mIsShiftPressed = false
+            }
         }
     }
 
@@ -138,13 +143,19 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         if (chCode == KeyCode.F5) {
         }
 
-        // left arrow (ctrl-able)
+        // left arrow (ctrl-able, shift-able)
         else if (chCode == KeyCode.LEFT) {
             // ctrl + left: move a word to left
             if (mIsCtrlPressed) {
                 if (mCaretOffset > 0) {
+                    // for text selection
+                    val origCaretOffset = mCaretOffset
+
+                    // regular expressions for word searching
                     val identifierRegex = "[0-9A-Za-z_]"
                     val spaceRegex = "\\s"
+
+                    // the character in front of the caret
                     val chInFront = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset - 1, mCaretOffset)
 
                     // search to left
@@ -161,28 +172,44 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                         break
                     }
 
-                    // re-render
+                    // update the origest-caret-offset
                     mOrigestCaretOffset = mCaretOffset
+
+                    // deal w/ selection
+                    manageSelectionWithAnInterval(mCaretLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+
+                    // re-render
                     render()
                 }
             }
-            // move a single character to left
+            // left-only: move a single character to left
             else {
                 if (mCaretOffset > 0) {
                     --mCaretOffset
                     mOrigestCaretOffset = mCaretOffset
+
+                    // deal w/ selection
+                    manageSelectionWithAnInterval(mCaretLineIdx, mCaretOffset + 1, mCaretLineIdx, mCaretOffset)
+
+                    // re-render
                     render()
                 }
             }
         }
 
-        // right arrow (ctrl-able)
+        // right arrow (ctrl-able, shift-able)
         else if (chCode == KeyCode.RIGHT) {
             // ctrl + right: move a word to right
             if (mIsCtrlPressed) {
                 if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
+                    // for text selection
+                    val origCaretOffset = mCaretOffset
+
+                    // regular expressions for word searching
                     val identifierRegex = "[0-9A-Za-z_]"
                     val spaceRegex = "\\s"
+
+                    // the character behind the caret
                     val chBehind = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset, mCaretOffset + 1)
 
                     // search to left
@@ -199,8 +226,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                         break
                     }
 
-                    // re-render
+                    // update the origest-caret-offset
                     mOrigestCaretOffset = mCaretOffset
+
+                    // deal w/ selection
+                    manageSelectionWithAnInterval(mCaretLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+
+                    // re-render
                     render()
                 }
             }
@@ -209,25 +241,44 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
                     ++mCaretOffset
                     mOrigestCaretOffset = mCaretOffset
+
+                    // deal w/ selection
+                    manageSelectionWithAnInterval(mCaretLineIdx, mCaretOffset - 1, mCaretLineIdx, mCaretOffset)
+
+                    // re-render
                     render()
                 }
             }
         }
 
-        // up arrow
+        // up arrow (shift-able)
         else if (chCode == KeyCode.UP) {
             if (mCaretLineIdx > 0) {
+                val origCaretOffset = mCaretOffset
+
                 --mCaretLineIdx
                 mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+
+                // deal w/ selection
+                manageSelectionWithAnInterval(mCaretLineIdx + 1, origCaretOffset, mCaretLineIdx, mCaretOffset)
+
+                // re-render
                 render()
             }
         }
 
-        // down arrow
+        // down arrow (shift-able)
         else if (chCode == KeyCode.DOWN) {
             if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
+                val origCaretOffset = mCaretOffset
+
                 ++mCaretLineIdx
                 mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+
+                // deal w/ selection
+                manageSelectionWithAnInterval(mCaretLineIdx - 1, origCaretOffset, mCaretLineIdx, mCaretOffset)
+
+                // re-render
                 render()
             }
         }
@@ -385,6 +436,19 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mShiftableCharactersMap?.getOrDefault(ch, ch[0]) ?: ch[0]
     }
 
+    // deal w/ an unprocessed interval
+    private fun manageSelectionWithAnInterval(startLineIdx: Int, startLineOffset: Int, endLineIdx: Int, endLineOffset: Int) {
+        if (mIsShiftPressed)
+            mSelectionManager.exclusizeSelection(
+                    startLineIdx,
+                    startLineOffset,
+                    endLineIdx,
+                    endLineOffset
+            )
+        else
+            mSelectionManager.clearSelections()
+    }
+
     // render
     private fun render() {
         val lineH = PreferenceManager.EditorPref.lineH
@@ -407,7 +471,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         renderLineNumberArea()
     }
 
-    // render the text
+    // render the text, including background-hints of selections
     private fun renderText() {
         // do lexeme analysis
         try {
@@ -438,7 +502,32 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // render all of the tokens
         var caretY = 0
-        // iterate every line
+        // iterate every line to render the backgrounds
+        mTextBuffersAndTokens.forEach { (_, tokens) ->
+            var caretX = 0
+            // iterate every token in each line
+            tokens.forEach { token ->
+                if (token.text != "\n") {
+                    // render text
+                    token.renderBackground(mGphCxt, caretX, caretY)
+
+                    // update the caret of x-axis
+                    caretX += token.text.length
+                }
+            }
+
+            // move the caret-y
+            ++caretY
+        }
+
+        /* ====== */
+
+        mSelectionManager.renderSelection(mGphCxt)
+
+        /* ====== */
+
+        caretY = 0
+        // iterate every line to render the texts
         mTextBuffersAndTokens.forEach { (_, tokens) ->
             var caretX = 0
             // iterate every token in each line
@@ -467,7 +556,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mGphCxt?.fillRect(
                 mCaretOffset * charW - halfOfCaretWidth +
                         PreferenceManager.EditorPref.lineStartOffsetX +
-                        PreferenceManager.EditorPref.lineNumberAreaWidth,
+                        PreferenceManager.EditorPref.LineNumberArea.width,
                 mCaretLineIdx * PreferenceManager.EditorPref.lineH,
                 caretW,
                 PreferenceManager.EditorPref.lineH
@@ -477,47 +566,48 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // render the line number area
     private fun renderLineNumberArea() {
         // render the background
-        mGphCxt?.fill = PreferenceManager.EditorPref.lineNumberAreaBgClr
+        mGphCxt?.fill = PreferenceManager.EditorPref.LineNumberArea.bgClr
         mGphCxt?.fillRect(
                 0.0,
                 0.0,
-                PreferenceManager.EditorPref.lineNumberAreaWidth,
+                PreferenceManager.EditorPref.LineNumberArea.width,
                 PreferenceManager.codeCvsHeight
         )
 
         // render the vertical-line
-        mGphCxt?.fill = PreferenceManager.EditorPref.lineNumberAreaFontClr
+        mGphCxt?.fill = PreferenceManager.EditorPref.LineNumberArea.fontClr
         mGphCxt?.fillRect(
-                PreferenceManager.EditorPref.lineNumberAreaWidth - (PreferenceManager.EditorPref.verticalLineWidth / 2.0),
+                PreferenceManager.EditorPref.LineNumberArea.width -
+                        (PreferenceManager.EditorPref.LineNumberArea.verticalLineWidth / 2.0),
                 0.0,
-                PreferenceManager.EditorPref.verticalLineWidth,
+                PreferenceManager.EditorPref.LineNumberArea.verticalLineWidth,
                 PreferenceManager.codeCvsHeight
         )
 
         // render the non-selected line numbers
         val maxDigitLen = (mTextBuffersAndTokens.size - 1).toString().length
-        mGphCxt?.fill = PreferenceManager.EditorPref.lineNumberAreaFontClr
+        mGphCxt?.fill = PreferenceManager.EditorPref.LineNumberArea.fontClr
         mGphCxt?.font = PreferenceManager.EditorPref.font
         for (y in 0 until mTextBuffersAndTokens.size) {
             if (y == mCaretLineIdx)
                 continue
             mGphCxt?.fillText(
                     " ".repeat(maxDigitLen - y.toString().length) + y.toString(),
-                    PreferenceManager.EditorPref.lineNumberOffsetX,
+                    PreferenceManager.EditorPref.LineNumberArea.numberOffsetX,
                     (y + 1) * PreferenceManager.EditorPref.lineH -
                             PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize,
-                    PreferenceManager.EditorPref.lineNumberAreaWidth
+                    PreferenceManager.EditorPref.LineNumberArea.width
             )
         }
 
         // render the selected line number
-        mGphCxt?.fill = PreferenceManager.EditorPref.lineNumberAreaSelectedFontClr
+        mGphCxt?.fill = PreferenceManager.EditorPref.LineNumberArea.selectedFontClr
         mGphCxt?.fillText(
                 " ".repeat(maxDigitLen - mCaretLineIdx.toString().length) + mCaretLineIdx.toString(),
-                PreferenceManager.EditorPref.lineNumberOffsetX,
+                PreferenceManager.EditorPref.LineNumberArea.numberOffsetX,
                 (mCaretLineIdx + 1) * PreferenceManager.EditorPref.lineH -
                         PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize,
-                PreferenceManager.EditorPref.lineNumberAreaWidth
+                PreferenceManager.EditorPref.LineNumberArea.width
         )
     }
 

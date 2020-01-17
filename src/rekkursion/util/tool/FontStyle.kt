@@ -49,6 +49,8 @@ class FontStyle {
         }
     }
 
+    /* ===================================================================== */
+
     // size ratio
     private var mSizeRatio: Double = 1.0
     val sizeRatio get() = mSizeRatio

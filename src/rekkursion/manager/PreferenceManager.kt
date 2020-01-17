@@ -40,7 +40,7 @@ object PreferenceManager {
         private const val BASIC_CHARA_WIDTH = 11.0
         private const val BASIC_LINE_HEIGHT = 26.0
         private const val BASIC_CARET_WIDTH = 1.0
-        private const val BASIC_LINE_START_OFFSET = 8.0
+        private const val BASIC_LINE_START_OFFSET = 6.0
 
         /* ========== */
 
@@ -100,62 +100,69 @@ object PreferenceManager {
 
         /* ========== */
 
+        // region
+        private var mSelectionClr: Color = Color.color(33 / 255.0, 66 / 255.0, 111 / 255.0)
+        var selectionClr
+            get() = mSelectionClr
+            set(value) { mSelectionClr = value }
+        // endregion
+
+        /* ========== */
+
         // line number area object
         object LineNumberArea {
+            // region the width of line number area
+            private var mLineNumberAreaWidth = 75.0
+            var width
+                get() = mLineNumberAreaWidth
+                set(value) { mLineNumberAreaWidth = value }
+            // endregion
 
+            /* ========== */
+
+            // region the bg color of line number area
+            private var mLineNumberAreaBgClr: Color = Color.color(0.35, 0.35, 0.35)
+            var bgClr
+                get() = mLineNumberAreaBgClr
+                set(value) { mLineNumberAreaBgClr = value }
+            // endregion
+
+            /* ========== */
+
+            // region the font color of line number area
+            private var mLineNumberAreaFontClr: Color = Color.color(0.7, 0.7, 0.7)
+            var fontClr
+                get() = mLineNumberAreaFontClr
+                set(value) { mLineNumberAreaFontClr = value }
+            // endregion
+
+            /* ========== */
+
+            // region the selected-line font color of line number area
+            private var mLineNumberAreaSelectedFontClr: Color = Color.color(0.94, 0.94, 0.94)
+            var selectedFontClr
+                get() = mLineNumberAreaSelectedFontClr
+                set(value) { mLineNumberAreaSelectedFontClr = value }
+            // endregion
+
+            /* ========== */
+
+            // region the width of vertical-line which is used to separate the line number area and the typing area
+            private var mVerticalLineWidth = 0.4
+            var verticalLineWidth
+                get() = mVerticalLineWidth
+                set(value) { mVerticalLineWidth = value }
+            // endregion
+
+            /* ========== */
+
+            // region the x-offset of line numbers
+            private var mLineNumberOffsetX = 6.0
+            var numberOffsetX
+                get() = mLineNumberOffsetX
+                set(value) { mLineNumberOffsetX = value }
+            // endregion
         }
-
-        // region the width of line number area
-        private var mLineNumberAreaWidth = 75.0
-        var lineNumberAreaWidth
-            get() = mLineNumberAreaWidth
-            set(value) { mLineNumberAreaWidth = value }
-        // endregion
-
-        /* ========== */
-
-        // region the bg color of line number area
-        private var mLineNumberAreaBgClr: Color = Color.color(0.35, 0.35, 0.35)
-        var lineNumberAreaBgClr
-            get() = mLineNumberAreaBgClr
-            set(value) { mLineNumberAreaBgClr = value }
-        // endregion
-
-        /* ========== */
-
-        // region the font color of line number area
-        private var mLineNumberAreaFontClr: Color = Color.color(0.7, 0.7, 0.7)
-        var lineNumberAreaFontClr
-            get() = mLineNumberAreaFontClr
-            set(value) { mLineNumberAreaFontClr = value }
-        // endregion
-
-        /* ========== */
-
-        // region the selected-line font color of line number area
-        private var mLineNumberAreaSelectedFontClr: Color = Color.color(0.94, 0.94, 0.94)
-        var lineNumberAreaSelectedFontClr
-            get() = mLineNumberAreaSelectedFontClr
-            set(value) { mLineNumberAreaSelectedFontClr = value }
-        // endregion
-
-        /* ========== */
-
-        // region the width of vertical-line which is used to separate the line number area and the typing area
-        private var mVerticalLineWidth = 0.4
-        var verticalLineWidth
-            get() = mVerticalLineWidth
-            set(value) { mVerticalLineWidth = value }
-        // endregion
-
-        /* ========== */
-
-        // region the x-offset of line numbers
-        private var mLineNumberOffsetX = 8.0
-        var lineNumberOffsetX
-            get() = mLineNumberOffsetX
-            set(value) { mLineNumberOffsetX = value }
-        // endregion
     }
 
     // language preference

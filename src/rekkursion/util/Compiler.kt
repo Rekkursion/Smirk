@@ -1,12 +1,12 @@
 package rekkursion.util
 
-import rekkursion.exception.LexemeAnalysisException
 import rekkursion.exception.NoTokenTypeException
-import java.lang.Exception
 
 class Compiler(language: Language) {
     // the language of this compiler
     private val mLang = language
+
+    /* ===================================================================== */
 
     // do the lexeme analysis
     fun analyzeLexeme(code: String): ArrayList<Token> {
