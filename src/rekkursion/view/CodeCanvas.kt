@@ -283,42 +283,55 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             }
         }
 
-        // end (ctrl-able)
+        // end (ctrl-able, shift-able)
         else if (chCode == KeyCode.END) {
+            val origCaretOffset = mCaretOffset
+            val origLineIdx = mCaretLineIdx
+
             // ctrl + end: go to the last character of the last line
             if (mIsCtrlPressed) {
                 mCaretLineIdx = mTextBuffersAndTokens.size - 1
                 mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx].first.length
                 mOrigestCaretOffset = mCaretOffset
-                render()
             }
             // go to the last character of the current line
             else {
                 if (mCaretOffset != mTextBuffersAndTokens[mCaretLineIdx].first.length) {
                     mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx].first.length
                     mOrigestCaretOffset = mCaretOffset
-                    render()
                 }
+            }
+
+            // deal w/ selection
+            if (mCaretOffset != origCaretOffset || mCaretLineIdx != origLineIdx) {
+                manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+                render()
             }
         }
 
-        // home (ctrl-able)
+        // home (ctrl-able, shift-able)
         else if (chCode == KeyCode.HOME) {
+            val origCaretOffset = mCaretOffset
+            val origLineIdx = mCaretLineIdx
+
             // ctrl + home: go to the first character of the first line
             if (mIsCtrlPressed) {
                 mCaretLineIdx = 0
                 mCaretOffset = 0
                 mOrigestCaretOffset = 0
-                render()
             }
-
             // go to the first character of the current line
             else {
                 if (mCaretOffset > 0) {
                     mCaretOffset = 0
                     mOrigestCaretOffset = mCaretOffset
-                    render()
                 }
+            }
+
+            // deal w/ selection
+            if (mCaretOffset != origCaretOffset || mCaretLineIdx != origLineIdx) {
+                manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+                render()
             }
         }
 
