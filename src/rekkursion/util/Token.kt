@@ -113,7 +113,7 @@ class TokenPrototype(type: TokenType, regexArr: Array<Regex>, fontStyle: FontSty
                         Pair(true, texts.substring(0, pointer))
                     // not at an END state -> failed
                     else
-                        Pair(false, texts.substring(0, pointer))
+                        Pair(false, texts.substring(0, pointer + 1))
                 }
                 // OTHERS edge exists
                 else {
