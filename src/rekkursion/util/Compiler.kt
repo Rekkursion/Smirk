@@ -27,8 +27,8 @@ class Compiler(language: Language) {
             // store all failed matched sub-strings
             var longestFailedMatchedString = ""
 
-            // try all of token types
-            for (tokenType in TokenType.values().filter { it.name != "UNKNOWN" }) {
+            // try all of token types except for KEYWORD and UNKNOWN
+            for (tokenType in TokenType.values().filter { it.name != "KEYWORD" && it.name != "UNKNOWN" }) {
                 // get the token prototype
                 val prototype = mLang.getTokenPrototype(tokenType) ?: throw NoTokenTypeException()
 
@@ -36,11 +36,20 @@ class Compiler(language: Language) {
                 val (matched, matchedString)
                         = prototype.matches(code.substring(pointer), mLang.predefinedOperators)
 
+                // get the matched token-type (needs since the matched IDENTIFIER could be KEYWORD)
+                val matchedTokenType =
+                // if the current trying prototype is the type of IDENTIFIER -> try matching KEYWORD
+                if (prototype.type == TokenType.IDENTIFIER && matched && mLang.predefinedKeywords.contains(matchedString))
+                    TokenType.KEYWORD
+                // else -> the original tried token-type
+                else
+                    tokenType
+
                 // if matched
                 if (matched) {
                     pointer += matchedString.length
                     allTokenTypesFailed = false
-                    ret.add(Token(tokenType, matchedString, prototype.fontStyle))
+                    ret.add(Token(matchedTokenType, matchedString, mLang.getTokenPrototype(matchedTokenType)!!.fontStyle))
                     break
                 }
                 // not matched

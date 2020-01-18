@@ -90,11 +90,11 @@ class SelectionManager {
                             w = PreferenceManager.codeCvsWidth - x
                         }
                         bgLineIdx -> {
-                            x = 0.0
-                            w = bgLineOffset * PreferenceManager.EditorPref.charW + offsetX
+                            x = offsetX
+                            w = bgLineOffset * PreferenceManager.EditorPref.charW
                         }
                         else -> {
-                            x = 0.0
+                            x = offsetX
                             w = PreferenceManager.codeCvsWidth
                         }
                     }

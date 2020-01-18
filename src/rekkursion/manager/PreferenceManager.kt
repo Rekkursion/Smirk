@@ -101,7 +101,7 @@ object PreferenceManager {
         /* ========== */
 
         // region the color of selection
-        private var mSelectionClr: Color = Color.color(23 / 255.0, 76 / 255.0, 111 / 255.0)
+        private var mSelectionClr: Color = Color.color(14 / 255.0, 96 / 255.0, 171 / 255.0)
         var selectionClr
             get() = mSelectionClr
             set(value) { mSelectionClr = value }
