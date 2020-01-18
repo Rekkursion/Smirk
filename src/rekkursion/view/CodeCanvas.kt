@@ -48,6 +48,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // is holding shift
     private var mIsShiftPressed = false
 
+    // is holding alt
+    private var mIsAltPressed = false
+
     // the point when the mouse is down
     private var mMouseDownPt: Point2D? = null
 
@@ -118,12 +121,10 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // key-released
         setOnKeyReleased { keyEvent ->
-            val chCode = keyEvent.code
-
-            if (chCode == KeyCode.CONTROL)
-                mIsCtrlPressed = false
-            else if (chCode == KeyCode.SHIFT) {
-                mIsShiftPressed = false
+            when (keyEvent.code) {
+                KeyCode.CONTROL -> mIsCtrlPressed = false
+                KeyCode.SHIFT -> mIsShiftPressed = false
+                KeyCode.ALT -> mIsAltPressed = false
             }
         }
     }
@@ -402,8 +403,11 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // visible character & white-space (shift-able)
         else if (chCode.code >= 32) {
+            // try to do a certain special operation, e.g., Ctrl+C, Ctrl+X, ...
+            if (doSpecialEditorOperation(ch)) return
+
             // get the visible character
-            val vCh = getVisibleChar(ch)
+            val vCh = getVisibleChar(ch) ?: return
 
             // append to the string-buffer
             mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, vCh)
@@ -448,6 +452,11 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // modifier: shift
         else if (chCode == KeyCode.SHIFT) {
             mIsShiftPressed = true
+        }
+
+        // modifier: alt
+        else if (chCode == KeyCode.ALT) {
+            mIsAltPressed = true
         }
 
         /* ===================================================================== */
@@ -503,12 +512,30 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         render()
     }
 
+    // do the special editor operation
+    private fun doSpecialEditorOperation(ch: String): Boolean {
+        // if it's not a single character -> false
+        if (ch.length != 1) return false
+
+        // get the key code from ch, then try to get the corresponding function
+        val keyCode = KeyCode.getKeyCode(ch.toUpperCase()) ?: return false
+        val func = PreferenceManager.EditorPref.Shortcuts.getOperation(
+                mIsCtrlPressed,
+                mIsShiftPressed,
+                mIsAltPressed,
+                keyCode.code
+        ) ?: return false
+
+        func.call()
+        return true
+    }
+
     // get the visible character
-    private fun getVisibleChar(ch: String): Char {
+    private fun getVisibleChar(ch: String): Char? {
         return if (!mIsShiftPressed)
-            ch[0]
+            if (ch.isEmpty()) null else ch[0]
         else
-            mShiftableCharactersMap?.getOrDefault(ch, ch[0]) ?: ch[0]
+            mShiftableCharactersMap?.getOrDefault(ch, null)
     }
 
     // set the longest line

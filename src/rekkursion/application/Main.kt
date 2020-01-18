@@ -3,9 +3,12 @@ package rekkursion.application
 import javafx.application.Application
 import javafx.scene.Parent
 import javafx.scene.Scene
+import javafx.scene.input.KeyCode
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import rekkursion.manager.PreferenceManager
+import rekkursion.manager.ShortcutManager
+import rekkursion.util.tool.ShortcutCommand
 import rekkursion.view.CodeCanvas
 
 class Main: Application() {
@@ -49,8 +52,9 @@ class Main: Application() {
 
     // only for testing
     private fun test() {
-        val p = Pair<StringBuffer, Int>(StringBuffer(), 3)
-        p.second
+//        val scManager = ShortcutManager()
+//        val f = scManager.getOperationByFunctionName("testYo", "rekkursion.global.EditorOperations")
+//        println(f?.call("sss"))
     }
 
     companion object {

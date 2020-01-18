@@ -1,5 +1,6 @@
 package rekkursion.manager
 
+import javafx.scene.input.KeyCode
 import javafx.scene.paint.Color
 import javafx.scene.text.Font
 import rekkursion.util.*
@@ -7,6 +8,7 @@ import rekkursion.util.statemachine.edge.EdgeType
 import rekkursion.util.statemachine.state.State
 import rekkursion.util.statemachine.state.StateType
 import rekkursion.util.tool.FontStyle
+import kotlin.reflect.KFunction
 
 object PreferenceManager {
     // region size related
@@ -37,6 +39,31 @@ object PreferenceManager {
 
     // editor preference
     object EditorPref {
+        // some shortcuts for the editor
+        object Shortcuts {
+            // region shortcut-manager for the editor
+            private val mShortcutManager = ShortcutManager("rekkursion.global.EditorOperations")
+                    // Ctrl, C = copy the selected text
+                    .addOrModifyShortcut("100", KeyCode.getKeyCode("C").code, "copySelectedText")
+                    // Ctrl, X = cut the selected text
+                    .addOrModifyShortcut("100", KeyCode.getKeyCode("X").code, "cutSelectedText")
+                    // Ctrl, V = paste the copied/cut text
+                    .addOrModifyShortcut("100", KeyCode.getKeyCode("V").code, "pasteSelectedText")
+            // endregion
+
+            // region get the corresponding function by a certain shortcut combination
+            fun getOperation(isCtrlPressed: Boolean, isShiftPressed: Boolean, isAltPressed: Boolean, keyCode: Int): KFunction<*>?
+                    = mShortcutManager.getOperationByShortcut(
+                            isCtrlPressed,
+                            isShiftPressed,
+                            isAltPressed,
+                            keyCode
+                    )
+            // endregion
+        }
+
+        /* ========== */
+
         private const val BASIC_CHARA_WIDTH = 11.0
         private const val BASIC_LINE_HEIGHT = 26.0
         private const val BASIC_CARET_WIDTH = 1.0
@@ -509,9 +536,8 @@ object PreferenceManager {
 
             TokenType.values().forEach { tokenType ->
                 val prototype = xogue.getTokenPrototype(tokenType)
-                println(tokenType.name)
-                prototype?.getStateMachineBuilder()?.create()?.print()
-                println("--------------------------------------------------------\n")
+                // for debugging
+//                prototype?.getStateMachineBuilder()?.create()?.print()
             }
 
             addLang(xogue)
