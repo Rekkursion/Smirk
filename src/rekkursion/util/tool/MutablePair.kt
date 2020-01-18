@@ -19,6 +19,13 @@ class MutablePair<T, S>(first: T, second: S) {
     // copy into a new pair
     fun copy(): MutablePair<T, S> = MutablePair(mFirst, mSecond)
 
+    // set the pair
+    fun setPair(first: T, second: S): MutablePair<T, S> {
+        mFirst = first
+        mSecond = second
+        return this
+    }
+
     // for destruction assignment, return the first value
     operator fun component1(): T = mFirst
 

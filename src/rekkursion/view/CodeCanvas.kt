@@ -4,6 +4,7 @@ import javafx.geometry.Point2D
 import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
 import javafx.scene.input.KeyCode
+import javafx.scene.input.ScrollEvent
 import javafx.scene.paint.Color
 import rekkursion.manager.PreferenceManager
 import rekkursion.manager.SelectionManager
@@ -14,7 +15,6 @@ import java.lang.Exception
 
 import java.util.ArrayList
 import java.util.HashMap
-import kotlin.math.abs
 import kotlin.math.floor
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -34,6 +34,10 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // be used when going up/down
     private var mOrigestCaretOffset = 0
+
+    // the longest line (the line which has the most characters, including spaces)
+    /* in the pair: first = line-index, second = length of that line */
+    private var mLongestLine = MutablePair(0, 0)
 
     // for each line: text buffer & analyzed tokens
     private val mTextBuffersAndTokens = ArrayList<MutablePair<StringBuffer, ArrayList<Token>>>()
@@ -94,37 +98,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         setOnMouseReleased { mMouseDownPt = null }
 
         setOnScroll { scrollEvent ->
-            // shift-pressed -> scrolls horizontal
-            if (mIsShiftPressed) {
-                // move the camera left/right
-                mCamera.move(
-                        // mouse-wheeling down -> move camera to right
-                        offsetX = if (scrollEvent.deltaY < 0.0) PreferenceManager.EditorPref.editorScrollingStepSize
-                            // mouse-wheeling up -> move camera to left
-                            else -PreferenceManager.EditorPref.editorScrollingStepSize,
-                        maxX = 
-                )
-            }
-            // not pressed -> scrolls vertical
-            else {
-                // the max y of the editor when scrolling
-                var maxY = mTextBuffersAndTokens.size * PreferenceManager.EditorPref.lineH -
-                        mCamera.height +
-                        PreferenceManager.EditorPref.blankHeight
-                if (maxY < 0.0) maxY = 0.0
-
-                // move the camera up/down
-                mCamera.move(
-                        // mouse-wheeling down -> move camera to down
-                        offsetY = if (scrollEvent.deltaY < 0.0) PreferenceManager.EditorPref.editorScrollingStepSize
-                            // mouse-wheeling up -> move camera to up
-                            else -PreferenceManager.EditorPref.editorScrollingStepSize,
-                        maxY = maxY
-                )
-            }
-
-            // re-render
-            render()
+            handleScrollEvent(scrollEvent)
         }
 
         /* related to mouse */
@@ -371,6 +345,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                     --mCaretLineIdx
                 }
             }
+
+            // find out and set the longest line
+            setLongestLine()
         }
 
         // delete
@@ -386,6 +363,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                     mTextBuffersAndTokens.removeAt(mCaretLineIdx + 1)
                 }
             }
+
+            // find out and set the longest line
+            setLongestLine()
         }
 
         // enter (shift-able)
@@ -413,6 +393,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mCaretOffset = 0
             mOrigestCaretOffset = mCaretOffset
             ++mCaretLineIdx
+
+            // find out and set the longest line
+            setLongestLine()
         }
 
         /* ===================================================================== */
@@ -437,6 +420,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                         PreferenceManager.EditorPref.Typing.symmetricSymbols[vCh.toString()]
                 )
             }
+
+            // find out and set the longest line
+            setLongestLine()
         }
 
         // tab
@@ -447,6 +433,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // update the caret offset
             mCaretOffset += 4
             mOrigestCaretOffset = mCaretOffset
+
+            // find out and set the longest line
+            setLongestLine()
         }
 
         /* ===================================================================== */
@@ -473,12 +462,63 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         }
     }
 
+    // handle the scroll event invoked by the event of on-scroll
+    private fun handleScrollEvent(scrollEvent: ScrollEvent) {
+        // shift-pressed -> scrolls horizontal
+        if (mIsShiftPressed) {
+            // the max x of the editor when scrolling
+            var maxX = mLongestLine.second * PreferenceManager.EditorPref.charW -
+                    mCamera.width +
+                    PreferenceManager.EditorPref.blankWidth
+            if (maxX < 0.0) maxX = 0.0
+
+            // move the camera left/right
+            mCamera.move(
+                    // mouse-wheeling down -> move camera to right
+                    offsetX = if (scrollEvent.deltaX < 0.0) PreferenceManager.EditorPref.editorScrollingStepSizeX
+                    // mouse-wheeling up -> move camera to left
+                    else -PreferenceManager.EditorPref.editorScrollingStepSizeX,
+                    maxX = maxX
+            )
+        }
+        // not pressed -> scrolls vertical
+        else {
+            // the max y of the editor when scrolling
+            var maxY = mTextBuffersAndTokens.size * PreferenceManager.EditorPref.lineH -
+                    mCamera.height +
+                    PreferenceManager.EditorPref.blankHeight
+            if (maxY < 0.0) maxY = 0.0
+
+            // move the camera up/down
+            mCamera.move(
+                    // mouse-wheeling down -> move camera to down
+                    offsetY = if (scrollEvent.deltaY < 0.0) PreferenceManager.EditorPref.editorScrollingStepSizeY
+                    // mouse-wheeling up -> move camera to up
+                    else -PreferenceManager.EditorPref.editorScrollingStepSizeY,
+                    maxY = maxY
+            )
+        }
+
+        // re-render
+        render()
+    }
+
     // get the visible character
     private fun getVisibleChar(ch: String): Char {
         return if (!mIsShiftPressed)
             ch[0]
         else
             mShiftableCharactersMap?.getOrDefault(ch, ch[0]) ?: ch[0]
+    }
+
+    // set the longest line
+    private fun setLongestLine() {
+        if (mTextBuffersAndTokens[mCaretLineIdx].first.length > mLongestLine.second)
+            mLongestLine.setPair(mCaretLineIdx, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+        if (mCaretLineIdx > 0 && mTextBuffersAndTokens[mCaretLineIdx - 1].first.length > mLongestLine.second)
+            mLongestLine.setPair(mCaretLineIdx - 1, mTextBuffersAndTokens[mCaretLineIdx - 1].first.length)
+        if (mCaretLineIdx < mTextBuffersAndTokens.size - 1 && mTextBuffersAndTokens[mCaretLineIdx + 1].first.length > mLongestLine.second)
+            mLongestLine.setPair(mCaretLineIdx + 1, mTextBuffersAndTokens[mCaretLineIdx + 1].first.length)
     }
 
     // deal w/ an unprocessed interval
@@ -681,8 +721,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 continue
             mGphCxt?.fillText(
                     " ".repeat(maxDigitLen - y.toString().length) + y.toString(),
-                    PreferenceManager.EditorPref.LineNumberArea.numberOffsetX -
-                            mCamera.locX,
+                    PreferenceManager.EditorPref.LineNumberArea.numberOffsetX,
                     (y + 1) * PreferenceManager.EditorPref.lineH -
                             PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize -
                             mCamera.locY,
@@ -694,8 +733,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mGphCxt?.fill = PreferenceManager.EditorPref.LineNumberArea.selectedFontClr
         mGphCxt?.fillText(
                 " ".repeat(maxDigitLen - mCaretLineIdx.toString().length) + mCaretLineIdx.toString(),
-                PreferenceManager.EditorPref.LineNumberArea.numberOffsetX -
-                        mCamera.locX,
+                PreferenceManager.EditorPref.LineNumberArea.numberOffsetX,
                 (mCaretLineIdx + 1) * PreferenceManager.EditorPref.lineH -
                         PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize -
                         mCamera.locY,

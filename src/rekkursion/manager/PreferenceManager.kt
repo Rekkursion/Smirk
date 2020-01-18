@@ -91,11 +91,20 @@ object PreferenceManager {
 
         /* ========== */
 
-        // region step size when scrolling the editor
-        private var mEditorScrollingStepSize = lineH * 3.0
-        var editorScrollingStepSize
-            get() = mEditorScrollingStepSize
-            set(value) { mEditorScrollingStepSize = value }
+        // region step size when scrolling the editor (left/right)
+        private var mEditorScrollingStepSizeX = charW * 7.5
+        var editorScrollingStepSizeX
+            get() = mEditorScrollingStepSizeX
+            set(value) { mEditorScrollingStepSizeX = value }
+        // endregion
+
+        /* ========== */
+
+        // region step size when scrolling the editor (up/down)
+        private var mEditorScrollingStepSizeY = lineH * 3.0
+        var editorScrollingStepSizeY
+            get() = mEditorScrollingStepSizeY
+            set(value) { mEditorScrollingStepSizeY = value }
         // endregion
 
         /* ========== */
@@ -105,6 +114,15 @@ object PreferenceManager {
         var blankHeight
             get() = mBlankHeight
             set(value) { mBlankHeight = value }
+        // endregion
+
+        /* ========== */
+
+        // region the blank's width when scrolling the rightest of the editor
+        private var mBlankWidth = 300.0
+        var blankWidth
+            get() = mBlankWidth
+            set(value) { mBlankWidth = value }
         // endregion
 
         /* ========== */

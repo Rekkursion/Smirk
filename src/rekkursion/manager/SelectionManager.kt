@@ -87,7 +87,7 @@ class SelectionManager {
                     when (idx) {
                         smLineIdx -> {
                             x = smLineOffset * PreferenceManager.EditorPref.charW + offsetX
-                            w = PreferenceManager.codeCvsWidth - x
+                            w = PreferenceManager.codeCvsWidth - x + camera.locX + camera.width
                         }
                         bgLineIdx -> {
                             x = offsetX
@@ -95,7 +95,7 @@ class SelectionManager {
                         }
                         else -> {
                             x = offsetX
-                            w = PreferenceManager.codeCvsWidth
+                            w = PreferenceManager.codeCvsWidth + camera.locX + camera.width
                         }
                     }
 
