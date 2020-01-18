@@ -30,8 +30,27 @@ class Camera(
     /* ===================================================================== */
 
     // move the camera by the offset
-    fun move(offsetX: Double, offsetY: Double): Point2D
-            = set(mLocX + offsetX, mLocY + offsetY)
+    fun move(
+            offsetX: Double = 0.0,
+            offsetY: Double = 0.0,
+            maxX: Double = Double.POSITIVE_INFINITY,
+            maxY: Double = Double.POSITIVE_INFINITY,
+            minX: Double = 0.0,
+            minY: Double = 0.0): Point2D {
+
+        val newLocX = when {
+                    mLocX + offsetX < minX -> minX
+                    mLocX + offsetX > maxX -> maxX
+                    else -> mLocX + offsetX
+                }
+        val newLocY = when {
+                    mLocY + offsetY < minY -> minY
+                    mLocY + offsetY > maxY -> maxY
+                    else -> mLocY + offsetY
+                }
+
+        return set(newLocX, newLocY)
+    }
 
     // change the camera size
     fun changeSize(newWidth: Double, newHeight: Double) {

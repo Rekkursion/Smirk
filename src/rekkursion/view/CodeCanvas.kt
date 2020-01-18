@@ -93,6 +93,44 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // mouse-released
         setOnMouseReleased { mMouseDownPt = null }
 
+        setOnScroll { scrollEvent ->
+            // shift-pressed -> scrolls horizontal
+            if (mIsShiftPressed) {
+                // move the camera left/right
+                mCamera.move(
+                        // mouse-wheeling down -> move camera to right
+                        offsetX = if (scrollEvent.deltaY < 0.0) PreferenceManager.EditorPref.editorScrollingStepSize
+                            // mouse-wheeling up -> move camera to left
+                            else -PreferenceManager.EditorPref.editorScrollingStepSize,
+                        maxX = 
+                )
+            }
+            // not pressed -> scrolls vertical
+            else {
+                // the max y of the editor when scrolling
+                var maxY = mTextBuffersAndTokens.size * PreferenceManager.EditorPref.lineH -
+                        mCamera.height +
+                        PreferenceManager.EditorPref.blankHeight
+                if (maxY < 0.0) maxY = 0.0
+
+                // move the camera up/down
+                mCamera.move(
+                        // mouse-wheeling down -> move camera to down
+                        offsetY = if (scrollEvent.deltaY < 0.0) PreferenceManager.EditorPref.editorScrollingStepSize
+                            // mouse-wheeling up -> move camera to up
+                            else -PreferenceManager.EditorPref.editorScrollingStepSize,
+                        maxY = maxY
+                )
+            }
+
+            // re-render
+            render()
+        }
+
+        /* related to mouse */
+        /* ===================================================================== */
+        /* related to keyboard */
+
         // key-pressed
         setOnKeyPressed { keyEvent ->
             val text = keyEvent.text

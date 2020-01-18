@@ -100,6 +100,15 @@ object PreferenceManager {
 
         /* ========== */
 
+        // region the blank's height when scrolling the lowest of the editor
+        private var mBlankHeight = 150.0
+        var blankHeight
+            get() = mBlankHeight
+            set(value) { mBlankHeight = value }
+        // endregion
+
+        /* ========== */
+
         // region the color of selection
         private var mSelectionClr: Color = Color.color(14 / 255.0, 96 / 255.0, 171 / 255.0)
         var selectionClr
