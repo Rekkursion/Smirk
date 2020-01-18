@@ -3,6 +3,8 @@ package rekkursion.view
 import javafx.geometry.Point2D
 import javafx.scene.canvas.Canvas
 import javafx.scene.canvas.GraphicsContext
+import javafx.scene.input.Clipboard
+import javafx.scene.input.ClipboardContent
 import javafx.scene.input.KeyCode
 import javafx.scene.input.ScrollEvent
 import javafx.scene.paint.Color
@@ -330,20 +332,27 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // back-space
         else if (chCode == KeyCode.BACK_SPACE) {
-            // delete a single character in front of the caret
-            if (mCaretOffset > 0) {
-                mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset - 1)
-                --mCaretOffset
-                mOrigestCaretOffset = mCaretOffset
-            }
-            // delete a '\n'
+            // delete the selected text
+            if (mSelectionManager.hasSelection())
+                removeSelectedText()
+
+            // delete a single character or '\n' in front of the caret
             else {
-                if (mCaretLineIdx > 0) {
-                    mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx - 1].first.length
+                // delete a single character in front of the caret
+                if (mCaretOffset > 0) {
+                    mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset - 1)
+                    --mCaretOffset
                     mOrigestCaretOffset = mCaretOffset
-                    mTextBuffersAndTokens[mCaretLineIdx - 1].first.append(mTextBuffersAndTokens[mCaretLineIdx].first.toString())
-                    mTextBuffersAndTokens.removeAt(mCaretLineIdx)
-                    --mCaretLineIdx
+                }
+                // delete a '\n'
+                else {
+                    if (mCaretLineIdx > 0) {
+                        mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx - 1].first.length
+                        mOrigestCaretOffset = mCaretOffset
+                        mTextBuffersAndTokens[mCaretLineIdx - 1].first.append(mTextBuffersAndTokens[mCaretLineIdx].first.toString())
+                        mTextBuffersAndTokens.removeAt(mCaretLineIdx)
+                        --mCaretLineIdx
+                    }
                 }
             }
 
@@ -353,15 +362,22 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // delete
         else if (chCode == KeyCode.DELETE) {
-            // delete a single character behind the caret
-            if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
-                mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset)
-            }
-            // delete a '\n'
+            // delete the selected text (as the same operation of back-space)
+            if (mSelectionManager.hasSelection())
+                removeSelectedText()
+
+            // delete a single character or '\n' behind the caret
             else {
-                if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
-                    mTextBuffersAndTokens[mCaretLineIdx].first.append(mTextBuffersAndTokens[mCaretLineIdx + 1].first.toString())
-                    mTextBuffersAndTokens.removeAt(mCaretLineIdx + 1)
+                // delete a single character behind the caret
+                if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
+                    mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset)
+                }
+                // delete a '\n'
+                else {
+                    if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
+                        mTextBuffersAndTokens[mCaretLineIdx].first.append(mTextBuffersAndTokens[mCaretLineIdx + 1].first.toString())
+                        mTextBuffersAndTokens.removeAt(mCaretLineIdx + 1)
+                    }
                 }
             }
 
@@ -373,6 +389,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         else if (chCode == KeyCode.ENTER) {
             // if shift is NOT pressed
             if (!mIsShiftPressed) {
+                // remove the selected text
+                removeSelectedText()
+
                 // insert a new string-buffer for this new line
                 mTextBuffersAndTokens.add(
                         mCaretLineIdx + 1,
@@ -395,6 +414,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mOrigestCaretOffset = mCaretOffset
             ++mCaretLineIdx
 
+            // clear selections
+            mSelectionManager.clearSelections()
+
             // find out and set the longest line
             setLongestLine()
         }
@@ -408,6 +430,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
             // get the visible character
             val vCh = getVisibleChar(ch) ?: return
+
+            // remove the selected text
+            removeSelectedText()
 
             // append to the string-buffer
             mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, vCh)
@@ -431,6 +456,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // tab
         else if (chCode == KeyCode.TAB) {
+            // remove the selected text
+            removeSelectedText()
+
             // append to the string-buffer
             mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, "    ")
 
@@ -526,7 +554,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 keyCode.code
         ) ?: return false
 
-        func.call()
+        func.call(this)
         return true
     }
 
@@ -546,6 +574,16 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mLongestLine.setPair(mCaretLineIdx - 1, mTextBuffersAndTokens[mCaretLineIdx - 1].first.length)
         if (mCaretLineIdx < mTextBuffersAndTokens.size - 1 && mTextBuffersAndTokens[mCaretLineIdx + 1].first.length > mLongestLine.second)
             mLongestLine.setPair(mCaretLineIdx + 1, mTextBuffersAndTokens[mCaretLineIdx + 1].first.length)
+    }
+
+    // remove the selected text
+    private fun removeSelectedText() {
+        val pair = mSelectionManager.removeSelectedText(mTextBuffersAndTokens)
+        if (pair != null) {
+            mCaretLineIdx = pair.first
+            mCaretOffset = pair.second
+            mOrigestCaretOffset = mCaretOffset
+        }
     }
 
     // deal w/ an unprocessed interval
@@ -628,30 +666,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     private fun renderText() {
         // do lexeme analysis
         try {
-            // analyze the current line
-            mTextBuffersAndTokens[mCaretLineIdx].second =
-                    PreferenceManager.LangPref.getUsedLang()!!.compile(
-                            mTextBuffersAndTokens[mCaretLineIdx].first.toString() + "\n"
-                    )!!
-
-            // analyze the previous line
-            if (mCaretLineIdx > 0) {
-                mTextBuffersAndTokens[mCaretLineIdx - 1].second =
-                        PreferenceManager.LangPref.getUsedLang()!!.compile(
-                                mTextBuffersAndTokens[mCaretLineIdx - 1].first.toString() + "\n"
-                        )!!
+            // analyze each line
+            mTextBuffersAndTokens.forEach { pair ->
+                pair.second = PreferenceManager.LangPref.getUsedLang()!!.compile(
+                        pair.first.toString() + "\n"
+                )!!
             }
-
-            // analyze the next line
-            if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
-                mTextBuffersAndTokens[mCaretLineIdx + 1].second =
-                        PreferenceManager.LangPref.getUsedLang()!!.compile(
-                                mTextBuffersAndTokens[mCaretLineIdx + 1].first.toString() + "\n"
-                        )!!
-            }
-        } catch (e: Exception) {
-            println(e.message)
-        }
+        } catch (e: Exception) { println(e.message) }
 
         // render all of the tokens
         var caretY = 0
@@ -675,7 +696,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         /* ====== */
 
-        mSelectionManager.renderSelection(mGphCxt, mCamera)
+        mSelectionManager.renderSelectionBackground(mGphCxt, mCamera)
 
         /* ====== */
 
@@ -766,6 +787,80 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                         mCamera.locY,
                 PreferenceManager.EditorPref.LineNumberArea.width
         )
+    }
+
+    /* ===================================================================== */
+
+    // copy the selected text
+    fun copySelectedText() {
+        // get the selected text
+        val selectedText = mSelectionManager.getSelectedText(mTextBuffersAndTokens)
+
+        // get the system clipboard and put the selected string into it
+        val clipboard = Clipboard.getSystemClipboard()
+        val content = ClipboardContent()
+        content.putString(selectedText)
+        clipboard.setContent(content)
+    }
+
+    // cut the selected text
+    fun cutSelectedText() {
+        /* cut = copy + delete */
+
+        // copy
+        copySelectedText()
+        // then delete
+        removeSelectedText()
+
+        // re-render
+        render()
+    }
+
+    // paste the selected text
+    fun pasteSelectedText() {
+        // get the system clipboard
+        val clipboard = Clipboard.getSystemClipboard()
+
+        // if the clipboard has a string -> paste it on
+        if (clipboard.hasString()) {
+            // remove the selected text first
+            removeSelectedText()
+
+            // get the several lines each separated by a single '\n'
+            val lines = clipboard.string.split("\n")
+            var first = true
+            var tmpLastHalf = ""
+            // insert them
+            lines.forEach { line ->
+                // add a whole new line if it's NOT the first line
+                if (!first) {
+                    mTextBuffersAndTokens.add(mCaretLineIdx + 1, MutablePair(StringBuffer(), arrayListOf()))
+                    ++mCaretLineIdx
+                    mCaretOffset = 0
+                    mOrigestCaretOffset = mCaretOffset
+                }
+
+                // get the last-half text if it's the first line
+                if (first) {
+                    tmpLastHalf = mTextBuffersAndTokens[mCaretLineIdx].first.substring(mCaretOffset)
+                    mTextBuffersAndTokens[mCaretLineIdx].first.delete(mCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+                }
+
+                // append behind the current caret
+                mTextBuffersAndTokens[mCaretLineIdx].first.append(line)
+                mCaretOffset += line.length
+                mOrigestCaretOffset = mCaretOffset
+
+                // not the first time at all
+                first = false
+            }
+
+            // append the the first line's last-half into the last line
+            mTextBuffersAndTokens[mCaretLineIdx].first.append(tmpLastHalf)
+
+            // re-render
+            render()
+        }
     }
 
     /* ===================================================================== */

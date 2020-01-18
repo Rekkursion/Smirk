@@ -20,6 +20,14 @@ class ShortcutManager(filename: String) {
 
     // add or modify a shortcut's operation
     fun addOrModifyShortcut(isCtrlPressed: Boolean, isShiftPressed: Boolean, isAltPressed: Boolean, primaryKeyCode: Int, funName: String): ShortcutManager {
+        val newMap = HashMap<ShortcutCommand, String>()
+        for (entry in mShortcutMap) {
+            if (entry.value != funName)
+                newMap[entry.key] = entry.value
+        }
+        mShortcutMap.clear()
+        mShortcutMap.putAll(newMap)
+
         val cmd = ShortcutCommand(isCtrlPressed, isShiftPressed, isAltPressed, primaryKeyCode)
         mShortcutMap[cmd] = funName
         return this

@@ -2,8 +2,10 @@ package rekkursion.manager
 
 import javafx.scene.canvas.GraphicsContext
 import rekkursion.util.Camera
+import rekkursion.util.Token
 import rekkursion.util.tool.MutablePair
 import rekkursion.util.tool.TextInterval
+import java.util.ArrayList
 import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
@@ -30,8 +32,92 @@ class SelectionManager {
         mMainSelection = null
     }
 
+    // region get the smaller line-index and line-offset
+    private fun getSmallerBound(): MutablePair<Int, Int>? = when {
+        mMainSelection == null -> null
+        mMainSelection!!.isReversed() -> mMainSelection!!.endCopied
+        else -> mMainSelection!!.startCopied
+    }
+    // endregion
+
+    // region get the bigger line-index and line-offset
+    private fun getBiggerBound(): MutablePair<Int, Int>? = when {
+        mMainSelection == null -> null
+        mMainSelection!!.isReversed() -> mMainSelection!!.startCopied
+        else -> mMainSelection!!.endCopied
+    }
+    // endregion
+
+    // check if there's any selection
+    fun hasSelection() = mMainSelection != null
+
+    // get the selected text
+    fun getSelectedText(buffersAndTokens: ArrayList<MutablePair<StringBuffer, ArrayList<Token>>>): String {
+        mMainSelection?.let {
+            // get the smaller line- index & offset
+            val (smLineIdx, smLineOffset) = getSmallerBound()!!
+
+            // get the bigger line- index & offset
+            val (bgLineIdx, bgLineOffset) = getBiggerBound()!!
+
+            // build the string by string-buffer
+            val sBuf = StringBuffer()
+            // single line
+            if (smLineIdx == bgLineIdx)
+                sBuf.append(buffersAndTokens[smLineIdx].first.toString().substring(smLineOffset, bgLineOffset))
+            // multiple lines
+            else {
+                for (lineIdx in smLineIdx..bgLineIdx) {
+                    when (lineIdx) {
+                        smLineIdx -> sBuf.append(buffersAndTokens[lineIdx].first.toString().substring(smLineOffset), "\n")
+                        bgLineIdx -> sBuf.append(buffersAndTokens[lineIdx].first.toString().substring(0, bgLineOffset))
+                        else -> sBuf.append(buffersAndTokens[lineIdx].first.toString(), "\n")
+                    }
+                }
+            }
+
+            // return the built string
+            return sBuf.toString()
+        }
+
+        // no selection, return the empty string
+        return ""
+    }
+
+    // remove the selected text
+    fun removeSelectedText(buffersAndTokens: ArrayList<MutablePair<StringBuffer, ArrayList<Token>>>): MutablePair<Int, Int>? {
+        mMainSelection?.let {
+            // get the smaller line- index & offset
+            val (smLineIdx, smLineOffset) = getSmallerBound()!!
+
+            // get the bigger line- index & offset
+            val (bgLineIdx, bgLineOffset) = getBiggerBound()!!
+
+            // single line
+            if (smLineIdx == bgLineIdx)
+                buffersAndTokens[smLineIdx].first.delete(smLineOffset, bgLineOffset)
+            // multiple lines
+            else {
+                // the smallest-line: delete the last-half of the sub-string
+                buffersAndTokens[smLineIdx].first.delete(smLineOffset, buffersAndTokens[smLineIdx].first.length)
+                // then put the biggest-line's last-half of the sub-string
+                buffersAndTokens[smLineIdx].first.append(buffersAndTokens[bgLineIdx].first.toString().substring(bgLineOffset))
+                // last step, remove all lines except for the smallest-line
+                buffersAndTokens.removeAll(buffersAndTokens.subList(smLineIdx + 1, bgLineIdx + 1))
+            }
+
+            // clear selections
+            clearSelections()
+
+            // return the new caret location (line-index & caret-offset)
+            return MutablePair(smLineIdx, smLineOffset)
+        }
+
+        return null
+    }
+
     // render the selection effect
-    fun renderSelection(gphCxt: GraphicsContext?, camera: Camera) {
+    fun renderSelectionBackground(gphCxt: GraphicsContext?, camera: Camera) {
         // if main-selection is NOT null
         mMainSelection?.let { mainSelection ->
             // get the offset-x of typing area
