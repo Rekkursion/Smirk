@@ -51,6 +51,8 @@ object PreferenceManager {
                     .addOrModifyShortcut("100", KeyCode.getKeyCode("V").code, "pasteSelectedText")
                     // Ctrl, A = select all text
                     .addOrModifyShortcut("100", KeyCode.getKeyCode("A").code, "selectAllText")
+                    // Ctrl, G = jump to the designated line
+                    .addOrModifyShortcut("100", KeyCode.getKeyCode("G").code, "jumpToDesignatedLine")
             // endregion
 
             // region get the corresponding function by a certain shortcut combination

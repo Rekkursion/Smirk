@@ -16,15 +16,17 @@ class Main: Application() {
         // set up supported languages
         setUpLang()
 
-        primaryStage.title = "Smirk"
+        // get the parent, build the scene, and show the stage
         primaryStage.scene = Scene(
                 initViews(),
                 PreferenceManager.windowWidth,
                 PreferenceManager.windowHeight
         )
+        primaryStage.scene.stylesheets.add("rekkursion/css/global.css")
+        primaryStage.title = "Smirk"
         primaryStage.show()
 
-        // for testing
+        // for testing, for debugging
         test()
     }
 

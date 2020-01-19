@@ -10,6 +10,8 @@ import javafx.scene.input.ScrollEvent
 import javafx.scene.paint.Color
 import rekkursion.manager.PreferenceManager
 import rekkursion.manager.SelectionManager
+import rekkursion.stage.InputType
+import rekkursion.stage.SingleLineTextInputStage
 import rekkursion.util.Camera
 import rekkursion.util.Token
 import rekkursion.util.tool.MutablePair
@@ -894,6 +896,32 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // re-render
         render()
+    }
+
+    // jump to the designated line
+    fun jumpToDesignatedLine() {
+        // create a single-line text input stage
+        val msgBox = SingleLineTextInputStage(
+                "Jump to a certain line",
+                "Line index:",
+                InputType.NON_NEGATIVE_INTEGER,
+                mCaretLineIdx.toString()
+        )
+        // show the stage and get the line-index
+        val lineIdxStr = msgBox.showDialog() ?: return
+        val lineIdx = max(min(lineIdxStr.toInt(), mTextBuffersAndTokens.size - 1), 0)
+
+        // if it's a different line-index
+        if (lineIdx != mCaretLineIdx) {
+            // update the caret's location (line-index & offset)
+            mCaretLineIdx = lineIdx
+            mCaretOffset = min(mCaretOffset, mTextBuffersAndTokens[lineIdx].first.length)
+
+            manageCamera()
+
+            // re-render
+            render()
+        }
     }
 
     /* ===================================================================== */

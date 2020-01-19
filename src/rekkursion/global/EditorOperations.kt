@@ -15,3 +15,6 @@ fun pasteSelectedText(codeCanvas: CodeCanvas) { codeCanvas.pasteSelectedText() }
 
 // select all text
 fun selectAllText(codeCanvas: CodeCanvas) { codeCanvas.selectAllText() }
+
+// jump to the designated line
+fun jumpToDesignatedLine(codeCanvas: CodeCanvas) { codeCanvas.jumpToDesignatedLine() }
