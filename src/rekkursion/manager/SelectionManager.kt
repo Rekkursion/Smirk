@@ -7,13 +7,12 @@ import rekkursion.util.tool.MutablePair
 import rekkursion.util.tool.TextInterval
 import java.util.ArrayList
 import kotlin.math.abs
-import kotlin.math.max
 import kotlin.math.min
 
 class SelectionManager {
     // selected text
-    private var mMainSelection: TextInterval? = null
-    val mainSelection get() = mMainSelection?.copy()
+    private var mPrimarySelection: TextInterval? = null
+    val primarySelection get() = mPrimarySelection?.copy()
 
     /* ===================================================================== */
 
@@ -21,39 +20,23 @@ class SelectionManager {
     fun exclusizeSelection(startLineIdx: Int, startLineOffset: Int, endLineIdx: Int, endLineOffset: Int) {
         val newInterval = TextInterval(startLineIdx, startLineOffset, endLineIdx, endLineOffset)
 
-        if (mMainSelection == null)
-            mMainSelection = newInterval
+        if (mPrimarySelection == null)
+            mPrimarySelection = newInterval
         else
-            mMainSelection?.setEnd(newInterval.endCopied)
+            mPrimarySelection?.setEnd(newInterval.endCopied)
     }
 
     // clear all selections
     fun clearSelections() {
-        mMainSelection = null
+        mPrimarySelection = null
     }
-
-    // region get the smaller line-index and line-offset
-    private fun getSmallerBound(): MutablePair<Int, Int>? = when {
-        mMainSelection == null -> null
-        mMainSelection!!.isReversed() -> mMainSelection!!.endCopied
-        else -> mMainSelection!!.startCopied
-    }
-    // endregion
-
-    // region get the bigger line-index and line-offset
-    private fun getBiggerBound(): MutablePair<Int, Int>? = when {
-        mMainSelection == null -> null
-        mMainSelection!!.isReversed() -> mMainSelection!!.startCopied
-        else -> mMainSelection!!.endCopied
-    }
-    // endregion
 
     // check if there's any selection
-    fun hasSelection() = mMainSelection != null
+    fun hasSelection() = mPrimarySelection != null
 
     // get the selected text
     fun getSelectedText(buffersAndTokens: ArrayList<MutablePair<StringBuffer, ArrayList<Token>>>): String {
-        mMainSelection?.let {
+        mPrimarySelection?.let {
             // get the smaller line- index & offset
             val (smLineIdx, smLineOffset) = getSmallerBound()!!
 
@@ -86,7 +69,7 @@ class SelectionManager {
 
     // remove the selected text
     fun removeSelectedText(buffersAndTokens: ArrayList<MutablePair<StringBuffer, ArrayList<Token>>>): MutablePair<Int, Int>? {
-        mMainSelection?.let {
+        mPrimarySelection?.let {
             // get the smaller line- index & offset
             val (smLineIdx, smLineOffset) = getSmallerBound()!!
 
@@ -119,7 +102,7 @@ class SelectionManager {
     // render the selection effect
     fun renderSelectionBackground(gphCxt: GraphicsContext?, camera: Camera) {
         // if main-selection is NOT null
-        mMainSelection?.let { mainSelection ->
+        mPrimarySelection?.let { mainSelection ->
             // get the offset-x of typing area
             val offsetX = PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.LineNumberArea.width
 
@@ -195,4 +178,22 @@ class SelectionManager {
             }
         }
     }
+
+    /* ===================================================================== */
+
+    // region private: get the smaller line-index and line-offset
+    private fun getSmallerBound(): MutablePair<Int, Int>? = when {
+        mPrimarySelection == null -> null
+        mPrimarySelection!!.isReversed() -> mPrimarySelection!!.endCopied
+        else -> mPrimarySelection!!.startCopied
+    }
+    // endregion
+
+    // region private: get the bigger line-index and line-offset
+    private fun getBiggerBound(): MutablePair<Int, Int>? = when {
+        mPrimarySelection == null -> null
+        mPrimarySelection!!.isReversed() -> mPrimarySelection!!.startCopied
+        else -> mPrimarySelection!!.endCopied
+    }
+    // endregion
 }

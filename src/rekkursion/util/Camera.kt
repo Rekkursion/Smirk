@@ -2,6 +2,7 @@ package rekkursion.util
 
 import javafx.geometry.Point2D
 import rekkursion.manager.PreferenceManager
+import rekkursion.util.tool.MutablePair
 
 class Camera(
         locX: Double = 0.0,
@@ -65,5 +66,19 @@ class Camera(
         changeSize(newWidth, newHeight)
 
         return Point2D(mLocX, mLocY)
+    }
+
+    // get line-indices of bounds of covered lines (lower & upper bounds)
+    fun getCameraCoveredBoundsLinesIndices(): MutablePair<Int, Int> {
+        // get the safe lower bound
+        var lowerBoundIdx: Int = (mLocY / PreferenceManager.EditorPref.lineH).toInt() - 3
+        if (lowerBoundIdx < 0) lowerBoundIdx = 0
+
+        // get the safe upper bound
+        var upperBoundIdx: Int = lowerBoundIdx + (mHeight / PreferenceManager.EditorPref.lineH).toInt() + 6
+        if (upperBoundIdx < 0) upperBoundIdx = 0
+
+        // return them as a mutable-pair
+        return MutablePair(lowerBoundIdx, upperBoundIdx)
     }
 }

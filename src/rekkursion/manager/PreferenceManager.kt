@@ -49,6 +49,8 @@ object PreferenceManager {
                     .addOrModifyShortcut("100", KeyCode.getKeyCode("X").code, "cutSelectedText")
                     // Ctrl, V = paste the copied/cut text
                     .addOrModifyShortcut("100", KeyCode.getKeyCode("V").code, "pasteSelectedText")
+                    // Ctrl, A = select all text
+                    .addOrModifyShortcut("100", KeyCode.getKeyCode("A").code, "selectAllText")
             // endregion
 
             // region get the corresponding function by a certain shortcut combination

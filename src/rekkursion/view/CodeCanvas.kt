@@ -18,6 +18,7 @@ import java.lang.Exception
 import java.util.ArrayList
 import java.util.HashMap
 import kotlin.math.floor
+import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
@@ -664,21 +665,31 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // render the text, including background-hints of selections
     private fun renderText() {
+        // get the lower and upper bounds of current camera location
+        val (lBound, uBound) = mCamera.getCameraCoveredBoundsLinesIndices()
+        val lowerBound = max(lBound, 0)
+        val upperBound = min(uBound, mTextBuffersAndTokens.size - 1)
+
         // do lexeme analysis
         try {
             // analyze each line
-            mTextBuffersAndTokens.forEach { pair ->
+            for (idx in lowerBound..upperBound) {
+                val pair = mTextBuffersAndTokens[idx]
                 pair.second = PreferenceManager.LangPref.getUsedLang()!!.compile(
                         pair.first.toString() + "\n"
                 )!!
             }
         } catch (e: Exception) { println(e.message) }
 
-        // render all of the tokens
-        var caretY = 0
-        // iterate every line to render the backgrounds
-        mTextBuffersAndTokens.forEach { (_, tokens) ->
+        // render all of the tokens between the bounds
+        var caretY = lowerBound
+        for (idx in lowerBound..upperBound) {
+            // initialize caret-x to zero
             var caretX = 0
+
+            // get classified tokens' backgrounds of each line
+            val tokens = mTextBuffersAndTokens[idx].second
+
             // iterate every token in each line
             tokens.forEach { token ->
                 if (token.text != "\n") {
@@ -696,14 +707,20 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         /* ====== */
 
+        // render the selections hint (background)
         mSelectionManager.renderSelectionBackground(mGphCxt, mCamera)
 
         /* ====== */
 
-        caretY = 0
-        // iterate every line to render the texts
-        mTextBuffersAndTokens.forEach { (_, tokens) ->
+        // render all of the tokens' texts between the bounds
+        caretY = lowerBound
+        for (idx in lowerBound..upperBound) {
+            // initialize caret-x to zero
             var caretX = 0
+
+            // get classified tokens of each line
+            val tokens = mTextBuffersAndTokens[idx].second
+
             // iterate every token in each line
             tokens.forEach { token ->
                 if (token.text != "\n") {
@@ -861,6 +878,22 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // re-render
             render()
         }
+    }
+
+    // select all text
+    fun selectAllText() {
+        // clear all selections first
+        mSelectionManager.clearSelections()
+        // then select all text
+        mSelectionManager.exclusizeSelection(
+                0,
+                0,
+                mTextBuffersAndTokens.size - 1,
+                mTextBuffersAndTokens[mTextBuffersAndTokens.size - 1].first.length
+        )
+
+        // re-render
+        render()
     }
 
     /* ===================================================================== */
