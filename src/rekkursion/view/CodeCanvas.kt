@@ -68,6 +68,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         initGraphicsContext()
         initEvents()
+        initPropertyListeners()
     }
 
     /* ===================================================================== */
@@ -131,6 +132,16 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 KeyCode.SHIFT -> mIsShiftPressed = false
                 KeyCode.ALT -> mIsAltPressed = false
             }
+        }
+    }
+
+    // initialize some properties' listeners
+    private fun initPropertyListeners() {
+        // the focused-property
+        focusedProperty().addListener { _, _, _ ->
+            mIsCtrlPressed = false
+            mIsShiftPressed = false
+            mIsAltPressed = false
         }
     }
 
@@ -901,14 +912,14 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // jump to the designated line
     fun jumpToDesignatedLine() {
         // create a single-line text input stage
-        val msgBox = SingleLineTextInputStage(
+        val inputStage = SingleLineTextInputStage(
                 "Jump to a certain line",
                 "Line index:",
                 InputType.NON_NEGATIVE_INTEGER,
                 mCaretLineIdx.toString()
         )
         // show the stage and get the line-index
-        val lineIdxStr = msgBox.showDialog() ?: return
+        val lineIdxStr = inputStage.showDialog() ?: return
         val lineIdx = max(min(lineIdxStr.toInt(), mTextBuffersAndTokens.size - 1), 0)
 
         // if it's a different line-index
@@ -917,6 +928,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mCaretLineIdx = lineIdx
             mCaretOffset = min(mCaretOffset, mTextBuffersAndTokens[lineIdx].first.length)
 
+            // deal w/ the camera
             manageCamera()
 
             // re-render
