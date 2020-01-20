@@ -1,7 +1,7 @@
 package rekkursion.util.command
 
-import rekkursion.view.control.editor.CodeCanvas
+import rekkursion.model.EditorModel
 
 interface EditorCommand: Command {
-    val mCodeCanvas: CodeCanvas
+    val mEditor: EditorModel
 }

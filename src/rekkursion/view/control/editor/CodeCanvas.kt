@@ -15,6 +15,9 @@ import rekkursion.view.stage.InputType
 import rekkursion.view.stage.SingleLineTextInputStage
 import rekkursion.util.Camera
 import rekkursion.util.Token
+import rekkursion.util.command.Command
+import rekkursion.util.command.EditorCommand
+import rekkursion.util.command.EditorInsertTextCommand
 import rekkursion.util.tool.MutablePair
 import java.lang.Exception
 
@@ -26,6 +29,9 @@ import kotlin.math.min
 class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canvas(mWidth, mHeight) {
     // the editor-model
     private val mModel = EditorModel(mWidth, mHeight)
+
+    // some commands for editor operations
+    private val mEditorCommands = HashMap<Int, Command>()
 
     // the graphics context
     private var mGphCxt: GraphicsContext? = null
@@ -49,6 +55,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     init {
         // insert the first line initially
         mModel.insertNewLine(0)
+
+        // initialize commands
+        mEditorCommands[32] = EditorInsertTextCommand(mModel)
 
         initGraphicsContext()
         initEvents()
@@ -347,7 +356,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
         }
 
-        // page-up
+        // page-up (ctrl-able, shift-able)
         else if (chCode == KeyCode.PAGE_UP) {
             // ctrl + page-up: go the smallest line of the current camera's location w/o moving it
             if (mIsCtrlPressed) {
@@ -370,7 +379,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
         }
 
-        // page-down
+        // page-down (ctrl-able, shift-able)
         else if (chCode == KeyCode.PAGE_DOWN) {
             // ctrl + page-down: go the biggest line of the current camera's location w/o moving it
             if (mIsCtrlPressed) {
@@ -489,18 +498,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // remove the selected text
             removeSelectedText()
 
-            // append to the string-buffer
-            mModel.insertTextAt(mModel.caretLineIdx, mModel.caretOffset, vStr)
-
-            // update the caret offset
-            mModel.setCaretOffset(mModel.caretOffset + 1, true)
-
-            // if the character is a symmetric character -> add the symmetric one
-            if (PreferenceManager.EditorPref.Typing.symmetricSymbols.containsKey(vStr))
-                mModel.insertTextAt(mModel.caretLineIdx, mModel.caretOffset, PreferenceManager.EditorPref.Typing.symmetricSymbols[vStr]!!)
-
-            // find out and set the longest line
-            setLongestLine(false)
+            // do the command of insert the visible (includes space) string
+            mEditorCommands[32]?.execute(vStr)
         }
 
         // tab
@@ -508,14 +507,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // remove the selected text
             removeSelectedText()
 
-            // append 4 white-spaces to the string-buffer
-            mModel.insertTextAt(mModel.caretLineIdx, mModel.caretOffset, "    ")
-
-            // update the caret offset
-            mModel.setCaretOffset(mModel.caretOffset + 4, true)
-
-            // find out and set the longest line
-            setLongestLine(false)
+            // do the command of insert 4 white-spaces as a '\t' character
+            mEditorCommands[32]?.execute("    ")
         }
 
         /* ===================================================================== */

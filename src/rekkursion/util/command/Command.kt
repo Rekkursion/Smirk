@@ -1,5 +1,5 @@
 package rekkursion.util.command
 
 interface Command {
-    fun execute()
+    fun execute(vararg args: Any?)
 }
