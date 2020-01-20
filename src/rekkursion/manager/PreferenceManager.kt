@@ -123,7 +123,7 @@ object PreferenceManager {
         /* ========== */
 
         // region step size when scrolling the editor (left/right)
-        private var mEditorScrollingStepSizeX = charW * 7.5
+        private var mEditorScrollingStepSizeX = charW * 10.5
         var editorScrollingStepSizeX
             get() = mEditorScrollingStepSizeX
             set(value) { mEditorScrollingStepSizeX = value }

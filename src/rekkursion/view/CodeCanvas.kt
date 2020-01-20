@@ -154,10 +154,19 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         val origOffset = mCaretOffset
 
         // set the new line index of the caret
-        mCaretLineIdx = min(mTextBuffersAndTokens.size - 1, floor(mouseY / PreferenceManager.EditorPref.lineH).toInt())
+        mCaretLineIdx = min(
+                floor((mouseY + mCamera.locY) / PreferenceManager.EditorPref.lineH).toInt(),
+                mTextBuffersAndTokens.size - 1
+        )
 
         // set the new caret offset
-        mCaretOffset = min(mTextBuffersAndTokens[mCaretLineIdx].first.length, (mouseX / PreferenceManager.EditorPref.charW).roundToInt())
+        mCaretOffset = min(
+                ((mouseX + mCamera.locX - PreferenceManager.EditorPref.lineStartOffsetX - PreferenceManager.EditorPref.LineNumberArea.width) / PreferenceManager.EditorPref.charW).roundToInt(),
+                mTextBuffersAndTokens[mCaretLineIdx].first.length
+        )
+
+        // deal w/ selection
+        manageSelectionWithAnInterval(origLineIdx, origOffset, mCaretLineIdx, mCaretOffset)
 
         // re-render if the current line changed
         if (mCaretLineIdx != origLineIdx || mCaretOffset != origOffset) {
@@ -371,7 +380,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             }
 
             // find out and set the longest line
-            setLongestLine()
+            setLongestLine(false)
         }
 
         // delete
@@ -396,7 +405,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             }
 
             // find out and set the longest line
-            setLongestLine()
+            setLongestLine(false)
         }
 
         // enter (shift-able)
@@ -432,7 +441,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mSelectionManager.clearSelections()
 
             // find out and set the longest line
-            setLongestLine()
+            setLongestLine(false)
         }
 
         /* ===================================================================== */
@@ -440,7 +449,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // visible character & white-space (shift-able)
         else if (chCode.code >= 32) {
             // try to do a certain special operation, e.g., Ctrl+C, Ctrl+X, ...
-            if (doSpecialEditorOperation(ch)) return
+            if (doSpecialEditorOperationByShortcut(ch)) return
 
             // get the visible character
             val vCh = getVisibleChar(ch) ?: return
@@ -465,7 +474,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             }
 
             // find out and set the longest line
-            setLongestLine()
+            setLongestLine(false)
         }
 
         // tab
@@ -481,7 +490,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             mOrigestCaretOffset = mCaretOffset
 
             // find out and set the longest line
-            setLongestLine()
+            setLongestLine(false)
         }
 
         /* ===================================================================== */
@@ -555,7 +564,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     }
 
     // do the special editor operation
-    private fun doSpecialEditorOperation(ch: String): Boolean {
+    private fun doSpecialEditorOperationByShortcut(ch: String): Boolean {
         // if it's not a single character -> false
         if (ch.length != 1) return false
 
@@ -581,13 +590,25 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     }
 
     // set the longest line
-    private fun setLongestLine() {
-        if (mTextBuffersAndTokens[mCaretLineIdx].first.length > mLongestLine.second)
-            mLongestLine.setPair(mCaretLineIdx, mTextBuffersAndTokens[mCaretLineIdx].first.length)
-        if (mCaretLineIdx > 0 && mTextBuffersAndTokens[mCaretLineIdx - 1].first.length > mLongestLine.second)
-            mLongestLine.setPair(mCaretLineIdx - 1, mTextBuffersAndTokens[mCaretLineIdx - 1].first.length)
-        if (mCaretLineIdx < mTextBuffersAndTokens.size - 1 && mTextBuffersAndTokens[mCaretLineIdx + 1].first.length > mLongestLine.second)
-            mLongestLine.setPair(mCaretLineIdx + 1, mTextBuffersAndTokens[mCaretLineIdx + 1].first.length)
+    private fun setLongestLine(searchWholeText: Boolean) {
+        // search the whole text in the editor
+        if (searchWholeText) {
+            Thread {
+                mTextBuffersAndTokens.forEachIndexed { index, (buffer, _) ->
+                    if (buffer.length > mLongestLine.second)
+                        mLongestLine.setPair(index, buffer.length)
+                }
+            }.start()
+        }
+        // only search the 3 lines round the current caret's line-index
+        else {
+            if (mTextBuffersAndTokens[mCaretLineIdx].first.length > mLongestLine.second)
+                mLongestLine.setPair(mCaretLineIdx, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+            if (mCaretLineIdx > 0 && mTextBuffersAndTokens[mCaretLineIdx - 1].first.length > mLongestLine.second)
+                mLongestLine.setPair(mCaretLineIdx - 1, mTextBuffersAndTokens[mCaretLineIdx - 1].first.length)
+            if (mCaretLineIdx < mTextBuffersAndTokens.size - 1 && mTextBuffersAndTokens[mCaretLineIdx + 1].first.length > mLongestLine.second)
+                mLongestLine.setPair(mCaretLineIdx + 1, mTextBuffersAndTokens[mCaretLineIdx + 1].first.length)
+        }
     }
 
     // remove the selected text
@@ -844,6 +865,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // re-render
         render()
+
+        // find the longest line among all of the text
+        setLongestLine(true)
     }
 
     // paste the selected text
@@ -890,6 +914,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
             // re-render
             render()
+
+            // find the longest line among all of the text
+            setLongestLine(true)
         }
     }
 
