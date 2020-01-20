@@ -85,8 +85,8 @@ class Camera(
     }
 
     // convert into line-index by the current loc-y and the passed mouse-y
-    fun toLineIndex(mouseY: Double): Int =
-            floor((mouseY + locY + (PreferenceManager.EditorPref.lineH / 2.0)) / PreferenceManager.EditorPref.lineH).roundToInt()
+    fun toLineIndex(mouseY: Double, looseFactor: Double = 0.0): Int =
+            floor((mouseY + locY + looseFactor) / PreferenceManager.EditorPref.lineH).roundToInt()
 
     // convert into caret-offset by the current loc-x and the passed mouse-x
     fun toCaretOffset(mouseX: Double): Int =

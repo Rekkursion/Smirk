@@ -56,7 +56,7 @@ object PreferenceManager {
             // endregion
 
             // region get the corresponding function by a certain shortcut combination
-            fun getOperation(isCtrlPressed: Boolean, isShiftPressed: Boolean, isAltPressed: Boolean, keyCode: Int): KFunction<*>?
+            fun getOperationFunction(isCtrlPressed: Boolean, isShiftPressed: Boolean, isAltPressed: Boolean, keyCode: Int): KFunction<*>?
                     = mShortcutManager.getOperationByShortcut(
                             isCtrlPressed,
                             isShiftPressed,

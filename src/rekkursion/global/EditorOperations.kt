@@ -1,6 +1,6 @@
 package rekkursion.global
 
-import rekkursion.view.CodeCanvas
+import rekkursion.view.control.CodeCanvas
 
 // TODO: some editor operations
 

@@ -1,4 +1,4 @@
-package rekkursion.view
+package rekkursion.view.control
 
 import javafx.geometry.Point2D
 import javafx.scene.canvas.Canvas
@@ -88,22 +88,52 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
             // deal with the mouse-pressed location
             if (mouseEvent.isPrimaryButtonDown) {
-                mMouseDownPt = Point2D(mouseEvent.x, mouseEvent.y)
                 handleMouseDown(mouseEvent.x, mouseEvent.y)
             }
         }
 
-        // mouse-moved
-        setOnMouseMoved { mouseEvent ->
+        // mouse-dragged (mouse-pressed + mouse-moved)
+        setOnMouseDragged { mouseEvent ->
             // if the left-button is down
             if (mouseEvent.isPrimaryButtonDown && mMouseDownPt != null) {
-                // TODO
+                val origLineIdx = min(
+                        mCamera.toLineIndex(mMouseDownPt!!.y),
+                        mTextBuffersAndTokens.size - 1
+                )
+
+                val origOffset = min(
+                        mCamera.toCaretOffset(mMouseDownPt!!.x),
+                        mTextBuffersAndTokens[origLineIdx].first.length
+                )
+
+                // set the new line index of the caret
+                mCaretLineIdx = max(min(
+                        mCamera.toLineIndex(mouseEvent.y),
+                        mTextBuffersAndTokens.size - 1
+                ), 0)
+
+                // set the new caret offset
+                mCaretOffset = max(min(
+                        mCamera.toCaretOffset(mouseEvent.x),
+                        mTextBuffersAndTokens[mCaretLineIdx].first.length
+                ), 0)
+
+                // deal w/ selection
+                manageSelectionWithAnInterval(origLineIdx, origOffset, mCaretLineIdx, mCaretOffset,
+                        origLineIdx != mCaretLineIdx || origOffset != mCaretOffset)
+
+                // re-render if the current line changed
+                if (mCaretLineIdx != origLineIdx || mCaretOffset != origOffset) {
+                    mOrigestCaretOffset = mCaretOffset
+                    render()
+                }
             }
         }
 
         // mouse-released
         setOnMouseReleased { mMouseDownPt = null }
 
+        // mouse-scrolling
         setOnScroll { scrollEvent ->
             handleScrollEvent(scrollEvent)
         }
@@ -145,6 +175,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // handle the mouse click-location invoked by the event of on-mouse-pressed
     private fun handleMouseDown(mouseX: Double, mouseY: Double) {
+        // set the mouse location when mouse-down
+        mMouseDownPt = Point2D(mouseX, mouseY)
+
         // get the original line index of the caret
         val origLineIdx = mCaretLineIdx
 
@@ -355,7 +388,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         else if (chCode == KeyCode.PAGE_UP) {
             // ctrl + page-up: go the smallest line of the current camera's location w/o moving it
             if (mIsCtrlPressed) {
-                val smallestLineIdx = mCamera.toLineIndex(0.0)
+                val smallestLineIdx = mCamera.toLineIndex(0.0, PreferenceManager.EditorPref.lineH / 2.0)
                 mCaretLineIdx = max(smallestLineIdx, 0)
                 mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
 
@@ -617,7 +650,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // get the key code from ch, then try to get the corresponding function
         val keyCode = KeyCode.getKeyCode(ch.toUpperCase()) ?: return false
-        val func = PreferenceManager.EditorPref.Shortcuts.getOperation(
+        val func = PreferenceManager.EditorPref.Shortcuts.getOperationFunction(
                 mIsCtrlPressed,
                 mIsShiftPressed,
                 mIsAltPressed,
@@ -669,8 +702,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     }
 
     // deal w/ an unprocessed interval
-    private fun manageSelectionWithAnInterval(startLineIdx: Int, startLineOffset: Int, endLineIdx: Int, endLineOffset: Int) {
-        if (mIsShiftPressed)
+    private fun manageSelectionWithAnInterval(startLineIdx: Int, startLineOffset: Int, endLineIdx: Int, endLineOffset: Int, isSelecting: Boolean = mIsShiftPressed) {
+        if (isSelecting)
             mSelectionManager.exclusizeSelection(
                     startLineIdx,
                     startLineOffset,
