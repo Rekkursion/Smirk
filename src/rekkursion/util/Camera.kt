@@ -3,6 +3,8 @@ package rekkursion.util
 import javafx.geometry.Point2D
 import rekkursion.manager.PreferenceManager
 import rekkursion.util.tool.MutablePair
+import kotlin.math.floor
+import kotlin.math.roundToInt
 
 class Camera(
         locX: Double = 0.0,
@@ -50,22 +52,22 @@ class Camera(
                     else -> mLocY + offsetY
                 }
 
-        return set(newLocX, newLocY)
+        return moveTo(newLocX, newLocY)
+    }
+
+    // set the camera location and the size
+    fun moveTo(newLocX: Double = locX, newLocY: Double = locY, newWidth: Double = mWidth, newHeight: Double = mHeight): Point2D {
+        mLocX = newLocX
+        mLocY = newLocY
+        changeSize(newWidth, newHeight)
+
+        return Point2D(mLocX, mLocY)
     }
 
     // change the camera size
     fun changeSize(newWidth: Double, newHeight: Double) {
         mWidth = newWidth
         mHeight = newHeight
-    }
-
-    // set the camera location and the size
-    fun set(newLocX: Double, newLocY: Double, newWidth: Double = mWidth, newHeight: Double = mHeight): Point2D {
-        mLocX = newLocX
-        mLocY = newLocY
-        changeSize(newWidth, newHeight)
-
-        return Point2D(mLocX, mLocY)
     }
 
     // get line-indices of bounds of covered lines (lower & upper bounds)
@@ -81,4 +83,12 @@ class Camera(
         // return them as a mutable-pair
         return MutablePair(lowerBoundIdx, upperBoundIdx)
     }
+
+    // convert into line-index by the current loc-y and the passed mouse-y
+    fun toLineIndex(mouseY: Double): Int =
+            floor((mouseY + locY + (PreferenceManager.EditorPref.lineH / 2.0)) / PreferenceManager.EditorPref.lineH).roundToInt()
+
+    // convert into caret-offset by the current loc-x and the passed mouse-x
+    fun toCaretOffset(mouseX: Double): Int =
+            ((mouseX + locX - PreferenceManager.EditorPref.lineStartOffsetX - PreferenceManager.EditorPref.LineNumberArea.width) / PreferenceManager.EditorPref.charW).roundToInt()
 }

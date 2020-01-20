@@ -10,8 +10,8 @@ import javafx.scene.input.ScrollEvent
 import javafx.scene.paint.Color
 import rekkursion.manager.PreferenceManager
 import rekkursion.manager.SelectionManager
-import rekkursion.stage.InputType
-import rekkursion.stage.SingleLineTextInputStage
+import rekkursion.view.stage.InputType
+import rekkursion.view.stage.SingleLineTextInputStage
 import rekkursion.util.Camera
 import rekkursion.util.Token
 import rekkursion.util.tool.MutablePair
@@ -19,10 +19,8 @@ import java.lang.Exception
 
 import java.util.ArrayList
 import java.util.HashMap
-import kotlin.math.floor
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canvas(mWidth, mHeight) {
     // the camera
@@ -155,13 +153,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // set the new line index of the caret
         mCaretLineIdx = min(
-                floor((mouseY + mCamera.locY) / PreferenceManager.EditorPref.lineH).toInt(),
+                mCamera.toLineIndex(mouseY),
                 mTextBuffersAndTokens.size - 1
         )
 
         // set the new caret offset
         mCaretOffset = min(
-                ((mouseX + mCamera.locX - PreferenceManager.EditorPref.lineStartOffsetX - PreferenceManager.EditorPref.LineNumberArea.width) / PreferenceManager.EditorPref.charW).roundToInt(),
+                mCamera.toCaretOffset(mouseX),
                 mTextBuffersAndTokens[mCaretLineIdx].first.length
         )
 
@@ -177,6 +175,14 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // handle the keyboard input invoked by the event of on-key-pressed
     private fun handleKeyboardInput(ch: String, chCode: KeyCode) {
+        // the original line-index & caret-offset before handling the operation
+        val origLineIdx = mCaretLineIdx
+        val origCaretOffset = mCaretOffset
+        var designateCameraLocY = false
+        var shouldMoveCamera = true
+
+        /* ===================================================================== */
+
         // F5
         if (chCode == KeyCode.F5) {
         }
@@ -307,9 +313,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // end (ctrl-able, shift-able)
         else if (chCode == KeyCode.END) {
-            val origCaretOffset = mCaretOffset
-            val origLineIdx = mCaretLineIdx
-
             // ctrl + end: go to the last character of the last line
             if (mIsCtrlPressed) {
                 mCaretLineIdx = mTextBuffersAndTokens.size - 1
@@ -330,9 +333,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // home (ctrl-able, shift-able)
         else if (chCode == KeyCode.HOME) {
-            val origCaretOffset = mCaretOffset
-            val origLineIdx = mCaretLineIdx
-
             // ctrl + home: go to the first character of the first line
             if (mIsCtrlPressed) {
                 mCaretLineIdx = 0
@@ -345,6 +345,52 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                     mCaretOffset = 0
                     mOrigestCaretOffset = mCaretOffset
                 }
+            }
+
+            // deal w/ selection
+            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+        }
+
+        // page-up
+        else if (chCode == KeyCode.PAGE_UP) {
+            // ctrl + page-up: go the smallest line of the current camera's location w/o moving it
+            if (mIsCtrlPressed) {
+                val smallestLineIdx = mCamera.toLineIndex(0.0)
+                mCaretLineIdx = max(smallestLineIdx, 0)
+                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+
+                shouldMoveCamera = false
+            }
+
+            // only page-up: go up w/ a distance of camera's height
+            // TODO: fix the calculation error for the operation of page-up
+            else {
+                val dis = (mCamera.height / PreferenceManager.EditorPref.lineH).toInt()
+                mCaretLineIdx = max(mCaretLineIdx - dis, 0)
+                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+            }
+
+            // deal w/ selection
+            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+        }
+
+        // page-down
+        else if (chCode == KeyCode.PAGE_DOWN) {
+            // ctrl + page-down: go the biggest line of the current camera's location w/o moving it
+            if (mIsCtrlPressed) {
+                val biggestLineIdx = mCamera.toLineIndex(height)
+                mCaretLineIdx = min(max(biggestLineIdx - 1, 0), mTextBuffersAndTokens.size - 1)
+                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+
+                shouldMoveCamera = false
+            }
+
+            // only page-down: go down w/ a distance of camera's height
+            // TODO: fix the calculation error for the operation of page-down
+            else {
+                val dis = (mCamera.height / PreferenceManager.EditorPref.lineH).toInt()
+                mCaretLineIdx = min(max(mCaretLineIdx + dis, 0), mTextBuffersAndTokens.size - 1)
+                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
             }
 
             // deal w/ selection
@@ -515,7 +561,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // deal w/ the camera and render the editor
         if (chCode != KeyCode.CONTROL && chCode != KeyCode.SHIFT) {
             // deal w/ the camera
-            manageCamera()
+            if (shouldMoveCamera)
+                manageCamera()
 
             // re-render
             render()
@@ -635,23 +682,32 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     }
 
     // deal w/ the camera
-    private fun manageCamera() {
+    private fun manageCamera(designatedNumOfLineIdxFromTop: Int? = null) {
         // get the total height to the current line index
         val totalHeightToLineIdx = (mCaretLineIdx + 1) * PreferenceManager.EditorPref.lineH - mCamera.locY
 
-        // scroll down if the current line is over-flowing (bigger than the editor height)
-        if (totalHeightToLineIdx > PreferenceManager.codeCvsHeight) {
-            val difference = totalHeightToLineIdx - PreferenceManager.codeCvsHeight
-            mCamera.move(0.0, difference)
+        // adjust the camera's y-offset w/o designating a certain line-index
+        if (designatedNumOfLineIdxFromTop == null) {
+            // scroll down if the current line is over-flowing (bigger than the editor height)
+            if (totalHeightToLineIdx > PreferenceManager.codeCvsHeight) {
+                val difference = totalHeightToLineIdx - PreferenceManager.codeCvsHeight
+                mCamera.move(0.0, difference)
+            }
+            // scroll up if the current line is under-flowing (smaller than two lines' height)
+            else if (totalHeightToLineIdx < PreferenceManager.EditorPref.lineH * 2.0) {
+                val difference =
+                        if (mCaretLineIdx == 0)
+                            PreferenceManager.EditorPref.lineH - totalHeightToLineIdx
+                        else
+                            PreferenceManager.EditorPref.lineH * 2.0 - totalHeightToLineIdx
+                mCamera.move(0.0, -difference)
+            }
         }
-        // scroll up if the current line is under-flowing (smaller than two lines' height)
-        else if (totalHeightToLineIdx < PreferenceManager.EditorPref.lineH * 2.0) {
-            val difference =
-                    if (mCaretLineIdx == 0)
-                        PreferenceManager.EditorPref.lineH - totalHeightToLineIdx
-                    else
-                        PreferenceManager.EditorPref.lineH * 2.0 - totalHeightToLineIdx
-            mCamera.move(0.0, -difference)
+        // a certain line-index designated, move the camera directly
+        else {
+            mCamera.moveTo(
+                    newLocY = max((mCaretLineIdx - designatedNumOfLineIdxFromTop), 0) * PreferenceManager.EditorPref.lineH
+            )
         }
 
         /**/

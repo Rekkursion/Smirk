@@ -1,4 +1,4 @@
-package rekkursion.stage
+package rekkursion.view.stage
 
 import javafx.animation.KeyFrame
 import javafx.animation.KeyValue
