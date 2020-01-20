@@ -19,7 +19,7 @@ class ShortcutManager(filename: String) {
     /* ===================================================================== */
 
     // add or modify a shortcut's operation
-    fun addOrModifyShortcut(isCtrlPressed: Boolean, isShiftPressed: Boolean, isAltPressed: Boolean, primaryKeyCode: Int, funName: String): ShortcutManager {
+    private fun addOrModifyShortcut(isCtrlPressed: Boolean, isShiftPressed: Boolean, isAltPressed: Boolean, primaryKeyCode: Int, funName: String): ShortcutManager {
         val newMap = HashMap<ShortcutCommand, String>()
         for (entry in mShortcutMap) {
             if (entry.value != funName)

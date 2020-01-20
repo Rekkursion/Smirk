@@ -1,4 +1,4 @@
-package rekkursion.view.control
+package rekkursion.view.control.editor
 
 import javafx.geometry.Point2D
 import javafx.scene.canvas.Canvas
@@ -10,6 +10,7 @@ import javafx.scene.input.ScrollEvent
 import javafx.scene.paint.Color
 import rekkursion.manager.PreferenceManager
 import rekkursion.manager.SelectionManager
+import rekkursion.model.EditorModel
 import rekkursion.view.stage.InputType
 import rekkursion.view.stage.SingleLineTextInputStage
 import rekkursion.util.Camera
@@ -23,27 +24,11 @@ import kotlin.math.max
 import kotlin.math.min
 
 class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canvas(mWidth, mHeight) {
-    // the camera
-    private val mCamera = Camera(width = mWidth, height = mHeight)
+    // the editor-model
+    private val mModel = EditorModel(mWidth, mHeight)
 
     // the graphics context
     private var mGphCxt: GraphicsContext? = null
-
-    // the current line index of the caret
-    private var mCaretLineIdx = 0
-
-    // the current offset at a certain line of the caret
-    private var mCaretOffset = 0
-
-    // be used when going up/down
-    private var mOrigestCaretOffset = 0
-
-    // the longest line (the line which has the most characters, including spaces)
-    /* in the pair: first = line-index, second = length of that line */
-    private var mLongestLine = MutablePair(0, 0)
-
-    // for each line: text buffer & analyzed tokens
-    private val mTextBuffersAndTokens = ArrayList<MutablePair<StringBuffer, ArrayList<Token>>>()
 
     // is holding ctrl
     private var mIsCtrlPressed = false
@@ -62,7 +47,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // for primary constructor
     init {
-        mTextBuffersAndTokens.add(MutablePair(StringBuffer(), arrayListOf()))
+        // insert the first line initially
+        mModel.insertNewLine(0)
 
         initGraphicsContext()
         initEvents()
@@ -97,36 +83,44 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // if the left-button is down
             if (mouseEvent.isPrimaryButtonDown && mMouseDownPt != null) {
                 val origLineIdx = min(
-                        mCamera.toLineIndex(mMouseDownPt!!.y),
-                        mTextBuffersAndTokens.size - 1
+                        mModel.camera.toLineIndex(mMouseDownPt!!.y),
+                        mModel.getNumOfLines() - 1
                 )
 
                 val origOffset = min(
-                        mCamera.toCaretOffset(mMouseDownPt!!.x),
-                        mTextBuffersAndTokens[origLineIdx].first.length
+                        mModel.camera.toCaretOffset(mMouseDownPt!!.x),
+                        mModel.getTextAt(origLineIdx).length
                 )
 
                 // set the new line index of the caret
-                mCaretLineIdx = max(min(
-                        mCamera.toLineIndex(mouseEvent.y),
-                        mTextBuffersAndTokens.size - 1
-                ), 0)
+                mModel.setCaretLineIndex(
+                        max(min(
+                                mModel.camera.toLineIndex(mouseEvent.y),
+                                mModel.getNumOfLines() - 1
+                        ), 0)
+                )
 
                 // set the new caret offset
-                mCaretOffset = max(min(
-                        mCamera.toCaretOffset(mouseEvent.x),
-                        mTextBuffersAndTokens[mCaretLineIdx].first.length
-                ), 0)
+                mModel.setCaretOffset(
+                        max(min(
+                                mModel.camera.toCaretOffset(mouseEvent.x),
+                                mModel.getTextAt(mModel.caretLineIdx).length
+                        ), 0),
+                        true
+                )
 
                 // deal w/ selection
-                manageSelectionWithAnInterval(origLineIdx, origOffset, mCaretLineIdx, mCaretOffset,
-                        origLineIdx != mCaretLineIdx || origOffset != mCaretOffset)
+                manageSelectionWithAnInterval(
+                        origLineIdx,
+                        origOffset,
+                        mModel.caretLineIdx,
+                        mModel.caretOffset,
+                        origLineIdx != mModel.caretLineIdx || origOffset != mModel.caretOffset
+                )
 
                 // re-render if the current line changed
-                if (mCaretLineIdx != origLineIdx || mCaretOffset != origOffset) {
-                    mOrigestCaretOffset = mCaretOffset
+                if (mModel.caretLineIdx != origLineIdx || mModel.caretOffset != origOffset)
                     render()
-                }
             }
         }
 
@@ -179,39 +173,30 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mMouseDownPt = Point2D(mouseX, mouseY)
 
         // get the original line index of the caret
-        val origLineIdx = mCaretLineIdx
+        val origLineIdx = mModel.caretLineIdx
 
         // get the original caret offset
-        val origOffset = mCaretOffset
+        val origOffset = mModel.caretOffset
 
         // set the new line index of the caret
-        mCaretLineIdx = min(
-                mCamera.toLineIndex(mouseY),
-                mTextBuffersAndTokens.size - 1
-        )
+        mModel.setCaretLineIndex(min(mModel.camera.toLineIndex(mouseY), mModel.getNumOfLines() - 1))
 
         // set the new caret offset
-        mCaretOffset = min(
-                mCamera.toCaretOffset(mouseX),
-                mTextBuffersAndTokens[mCaretLineIdx].first.length
-        )
+        mModel.setCaretOffset(min(mModel.camera.toCaretOffset(mouseX), mModel.getTextAt(mModel.caretLineIdx).length), true)
 
         // deal w/ selection
-        manageSelectionWithAnInterval(origLineIdx, origOffset, mCaretLineIdx, mCaretOffset)
+        manageSelectionWithAnInterval(origLineIdx, origOffset, mModel.caretLineIdx, mModel.caretOffset)
 
         // re-render if the current line changed
-        if (mCaretLineIdx != origLineIdx || mCaretOffset != origOffset) {
-            mOrigestCaretOffset = mCaretOffset
+        if (mModel.caretLineIdx != origLineIdx || mModel.caretOffset != origOffset)
             render()
-        }
     }
 
     // handle the keyboard input invoked by the event of on-key-pressed
     private fun handleKeyboardInput(ch: String, chCode: KeyCode) {
         // the original line-index & caret-offset before handling the operation
-        val origLineIdx = mCaretLineIdx
-        val origCaretOffset = mCaretOffset
-        var designateCameraLocY = false
+        val origLineIdx = mModel.caretLineIdx
+        val origCaretOffset = mModel.caretOffset
         var shouldMoveCamera = true
 
         /* ===================================================================== */
@@ -226,24 +211,21 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         else if (chCode == KeyCode.LEFT) {
             // ctrl + left: move a word to left
             if (mIsCtrlPressed) {
-                if (mCaretOffset > 0) {
-                    // for text selection
-                    val origCaretOffset = mCaretOffset
-
+                if (mModel.caretOffset > 0) {
                     // regular expressions for word searching
                     val identifierRegex = "[0-9A-Za-z_]"
                     val spaceRegex = "\\s"
 
                     // the character in front of the caret
-                    val chInFront = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset - 1, mCaretOffset)
+                    val chInFront = mModel.getTextAtCurrentLine().substring(mModel.caretOffset - 1, mModel.caretOffset)
 
                     // search to left
                     while (true) {
-                        --mCaretOffset
-                        if (mCaretOffset == 0)
+                        mModel.setCaretOffset(mModel.caretOffset - 1, true)
+                        if (mModel.caretOffset == 0)
                             break
 
-                        val newChInFront = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset - 1, mCaretOffset)
+                        val newChInFront = mModel.getTextAtCurrentLine().substring(mModel.caretOffset - 1, mModel.caretOffset)
                         if (chInFront.matches(identifierRegex.toRegex()) && newChInFront.matches(identifierRegex.toRegex()))
                             continue
                         if (chInFront.matches(spaceRegex.toRegex()) && newChInFront.matches(spaceRegex.toRegex()))
@@ -251,21 +233,18 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                         break
                     }
 
-                    // update the origest-caret-offset
-                    mOrigestCaretOffset = mCaretOffset
-
                     // deal w/ selection
-                    manageSelectionWithAnInterval(mCaretLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+                    manageSelectionWithAnInterval(mModel.caretLineIdx, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
                 }
             }
             // left-only: move a single character to left
             else {
-                if (mCaretOffset > 0) {
-                    --mCaretOffset
-                    mOrigestCaretOffset = mCaretOffset
+                if (mModel.caretOffset > 0) {
+                    // update the caret-offset
+                    mModel.setCaretOffset(mModel.caretOffset - 1, true)
 
                     // deal w/ selection
-                    manageSelectionWithAnInterval(mCaretLineIdx, mCaretOffset + 1, mCaretLineIdx, mCaretOffset)
+                    manageSelectionWithAnInterval(mModel.caretLineIdx, mModel.caretOffset + 1, mModel.caretLineIdx, mModel.caretOffset)
                 }
             }
         }
@@ -274,24 +253,21 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         else if (chCode == KeyCode.RIGHT) {
             // ctrl + right: move a word to right
             if (mIsCtrlPressed) {
-                if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
-                    // for text selection
-                    val origCaretOffset = mCaretOffset
-
+                if (mModel.caretOffset < mModel.getTextAtCurrentLine().length) {
                     // regular expressions for word searching
                     val identifierRegex = "[0-9A-Za-z_]"
                     val spaceRegex = "\\s"
 
                     // the character behind the caret
-                    val chBehind = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset, mCaretOffset + 1)
+                    val chBehind = mModel.getTextAtCurrentLine().substring(mModel.caretOffset, mModel.caretOffset + 1)
 
                     // search to left
                     while (true) {
-                        ++mCaretOffset
-                        if (mCaretOffset == mTextBuffersAndTokens[mCaretLineIdx].first.length)
+                        mModel.setCaretOffset(mModel.caretOffset + 1, true)
+                        if (mModel.caretOffset == mModel.getTextAtCurrentLine().length)
                             break
 
-                        val newChBehind = mTextBuffersAndTokens[mCaretLineIdx].first.toString().substring(mCaretOffset, mCaretOffset + 1)
+                        val newChBehind = mModel.getTextAtCurrentLine().substring(mModel.caretOffset, mModel.caretOffset + 1)
                         if (chBehind.matches(identifierRegex.toRegex()) && newChBehind.matches(identifierRegex.toRegex()))
                             continue
                         if (chBehind.matches(spaceRegex.toRegex()) && newChBehind.matches(spaceRegex.toRegex()))
@@ -299,48 +275,41 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                         break
                     }
 
-                    // update the origest-caret-offset
-                    mOrigestCaretOffset = mCaretOffset
-
                     // deal w/ selection
-                    manageSelectionWithAnInterval(mCaretLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+                    manageSelectionWithAnInterval(mModel.caretLineIdx, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
                 }
             }
             // move a single character to right
             else {
-                if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
-                    ++mCaretOffset
-                    mOrigestCaretOffset = mCaretOffset
+                if (mModel.caretOffset < mModel.getTextAtCurrentLine().length) {
+                    // update the caret-offset
+                    mModel.setCaretOffset(mModel.caretOffset + 1, true)
 
                     // deal w/ selection
-                    manageSelectionWithAnInterval(mCaretLineIdx, mCaretOffset - 1, mCaretLineIdx, mCaretOffset)
+                    manageSelectionWithAnInterval(mModel.caretLineIdx, mModel.caretOffset - 1, mModel.caretLineIdx, mModel.caretOffset)
                 }
             }
         }
 
         // up arrow (shift-able)
         else if (chCode == KeyCode.UP) {
-            if (mCaretLineIdx > 0) {
-                val origCaretOffset = mCaretOffset
-
-                --mCaretLineIdx
-                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+            if (mModel.caretLineIdx > 0) {
+                mModel.setCaretLineIndex(mModel.caretLineIdx - 1)
+                mModel.setCaretOffset(min(mModel.origestCaretOffset, mModel.getTextAtCurrentLine().length), false)
 
                 // deal w/ selection
-                manageSelectionWithAnInterval(mCaretLineIdx + 1, origCaretOffset, mCaretLineIdx, mCaretOffset)
+                manageSelectionWithAnInterval(mModel.caretLineIdx + 1, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
             }
         }
 
         // down arrow (shift-able)
         else if (chCode == KeyCode.DOWN) {
-            if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
-                val origCaretOffset = mCaretOffset
-
-                ++mCaretLineIdx
-                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+            if (mModel.caretLineIdx < mModel.getNumOfLines() - 1) {
+                mModel.setCaretLineIndex(mModel.caretLineIdx + 1)
+                mModel.setCaretOffset(min(mModel.origestCaretOffset, mModel.getTextAtCurrentLine().length), false)
 
                 // deal w/ selection
-                manageSelectionWithAnInterval(mCaretLineIdx - 1, origCaretOffset, mCaretLineIdx, mCaretOffset)
+                manageSelectionWithAnInterval(mModel.caretLineIdx - 1, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
             }
         }
 
@@ -348,49 +317,43 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         else if (chCode == KeyCode.END) {
             // ctrl + end: go to the last character of the last line
             if (mIsCtrlPressed) {
-                mCaretLineIdx = mTextBuffersAndTokens.size - 1
-                mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx].first.length
-                mOrigestCaretOffset = mCaretOffset
+                mModel.setCaretLineIndex(mModel.getNumOfLines() - 1)
+                mModel.setCaretOffset(mModel.getTextAtCurrentLine().length, true)
             }
             // go to the last character of the current line
             else {
-                if (mCaretOffset != mTextBuffersAndTokens[mCaretLineIdx].first.length) {
-                    mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx].first.length
-                    mOrigestCaretOffset = mCaretOffset
-                }
+                if (mModel.caretOffset != mModel.getTextAtCurrentLine().length)
+                    mModel.setCaretOffset(mModel.getTextAtCurrentLine().length, true)
             }
 
             // deal w/ selection
-            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
         }
 
         // home (ctrl-able, shift-able)
         else if (chCode == KeyCode.HOME) {
             // ctrl + home: go to the first character of the first line
             if (mIsCtrlPressed) {
-                mCaretLineIdx = 0
-                mCaretOffset = 0
-                mOrigestCaretOffset = 0
+                mModel.setCaretLineIndex(0)
+                mModel.setCaretOffset(0, true)
             }
             // go to the first character of the current line
             else {
-                if (mCaretOffset > 0) {
-                    mCaretOffset = 0
-                    mOrigestCaretOffset = mCaretOffset
-                }
+                if (mModel.caretOffset > 0)
+                    mModel.setCaretOffset(0, true)
             }
 
             // deal w/ selection
-            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
         }
 
         // page-up
         else if (chCode == KeyCode.PAGE_UP) {
             // ctrl + page-up: go the smallest line of the current camera's location w/o moving it
             if (mIsCtrlPressed) {
-                val smallestLineIdx = mCamera.toLineIndex(0.0, PreferenceManager.EditorPref.lineH / 2.0)
-                mCaretLineIdx = max(smallestLineIdx, 0)
-                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+                val smallestLineIdx = mModel.camera.toLineIndex(0.0, PreferenceManager.EditorPref.lineH / 2.0)
+                mModel.setCaretLineIndex(max(smallestLineIdx, 0))
+                mModel.setCaretOffset(min(mModel.origestCaretOffset, mModel.getTextAtCurrentLine().length), false)
 
                 shouldMoveCamera = false
             }
@@ -398,22 +361,22 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // only page-up: go up w/ a distance of camera's height
             // TODO: fix the calculation error for the operation of page-up
             else {
-                val dis = (mCamera.height / PreferenceManager.EditorPref.lineH).toInt()
-                mCaretLineIdx = max(mCaretLineIdx - dis, 0)
-                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+                val dis = (mModel.camera.height / PreferenceManager.EditorPref.lineH).toInt()
+                mModel.setCaretLineIndex(max(mModel.caretLineIdx - dis, 0))
+                mModel.setCaretOffset(min(mModel.origestCaretOffset, mModel.getTextAtCurrentLine().length), false)
             }
 
             // deal w/ selection
-            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
         }
 
         // page-down
         else if (chCode == KeyCode.PAGE_DOWN) {
             // ctrl + page-down: go the biggest line of the current camera's location w/o moving it
             if (mIsCtrlPressed) {
-                val biggestLineIdx = mCamera.toLineIndex(height)
-                mCaretLineIdx = min(max(biggestLineIdx - 1, 0), mTextBuffersAndTokens.size - 1)
-                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+                val biggestLineIdx = mModel.camera.toLineIndex(height)
+                mModel.setCaretLineIndex(min(max(biggestLineIdx - 1, 0), mModel.getNumOfLines() - 1))
+                mModel.setCaretOffset(min(mModel.origestCaretOffset, mModel.getTextAtCurrentLine().length), false)
 
                 shouldMoveCamera = false
             }
@@ -421,13 +384,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // only page-down: go down w/ a distance of camera's height
             // TODO: fix the calculation error for the operation of page-down
             else {
-                val dis = (mCamera.height / PreferenceManager.EditorPref.lineH).toInt()
-                mCaretLineIdx = min(max(mCaretLineIdx + dis, 0), mTextBuffersAndTokens.size - 1)
-                mCaretOffset = min(mOrigestCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+                val dis = (mModel.camera.height / PreferenceManager.EditorPref.lineH).toInt()
+                mModel.setCaretLineIndex(min(max(mModel.caretLineIdx + dis, 0), mModel.getNumOfLines() - 1))
+                mModel.setCaretOffset(min(mModel.origestCaretOffset, mModel.getTextAtCurrentLine().length), false)
             }
 
             // deal w/ selection
-            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mCaretLineIdx, mCaretOffset)
+            manageSelectionWithAnInterval(origLineIdx, origCaretOffset, mModel.caretLineIdx, mModel.caretOffset)
         }
 
         /* ===================================================================== */
@@ -441,19 +404,17 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // delete a single character or '\n' in front of the caret
             else {
                 // delete a single character in front of the caret
-                if (mCaretOffset > 0) {
-                    mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset - 1)
-                    --mCaretOffset
-                    mOrigestCaretOffset = mCaretOffset
+                if (mModel.caretOffset > 0) {
+                    mModel.deleteCharAt(mModel.caretLineIdx, mModel.caretOffset - 1)
+                    mModel.setCaretOffset(mModel.caretOffset - 1, true)
                 }
                 // delete a '\n'
                 else {
-                    if (mCaretLineIdx > 0) {
-                        mCaretOffset = mTextBuffersAndTokens[mCaretLineIdx - 1].first.length
-                        mOrigestCaretOffset = mCaretOffset
-                        mTextBuffersAndTokens[mCaretLineIdx - 1].first.append(mTextBuffersAndTokens[mCaretLineIdx].first.toString())
-                        mTextBuffersAndTokens.removeAt(mCaretLineIdx)
-                        --mCaretLineIdx
+                    if (mModel.caretLineIdx > 0) {
+                        mModel.setCaretOffset(mModel.getTextLengthAt(mModel.caretLineIdx - 1), true)
+                        mModel.appendTextAt(mModel.caretLineIdx - 1, mModel.getTextAtCurrentLine())
+                        mModel.removeCurrentLine()
+                        mModel.setCaretLineIndex(mModel.caretLineIdx - 1)
                     }
                 }
             }
@@ -471,14 +432,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // delete a single character or '\n' behind the caret
             else {
                 // delete a single character behind the caret
-                if (mCaretOffset < mTextBuffersAndTokens[mCaretLineIdx].first.length) {
-                    mTextBuffersAndTokens[mCaretLineIdx].first.deleteCharAt(mCaretOffset)
-                }
+                if (mModel.caretOffset < mModel.getTextAtCurrentLine().length)
+                    mModel.deleteCharAt(mModel.caretLineIdx, mModel.caretOffset)
                 // delete a '\n'
                 else {
-                    if (mCaretLineIdx < mTextBuffersAndTokens.size - 1) {
-                        mTextBuffersAndTokens[mCaretLineIdx].first.append(mTextBuffersAndTokens[mCaretLineIdx + 1].first.toString())
-                        mTextBuffersAndTokens.removeAt(mCaretLineIdx + 1)
+                    if (mModel.caretLineIdx < mModel.getNumOfLines() - 1) {
+                        mModel.appendTextAt(mModel.caretLineIdx, mModel.getTextAt(mModel.caretLineIdx + 1))
+                        mModel.removeLineAt(mModel.caretLineIdx + 1)
                     }
                 }
             }
@@ -495,26 +455,18 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 removeSelectedText()
 
                 // insert a new string-buffer for this new line
-                mTextBuffersAndTokens.add(
-                        mCaretLineIdx + 1,
-                        MutablePair(
-                                StringBuffer(mTextBuffersAndTokens[mCaretLineIdx].first.substring(mCaretOffset)),
-                                arrayListOf()
-                        )
-                )
+                mModel.insertNewLine(mModel.caretLineIdx + 1, mModel.getTextAtCurrentLine().substring(mModel.caretOffset))
 
                 // move the sub-string behind the origin caret location to the new line
-                mTextBuffersAndTokens[mCaretLineIdx].first.delete(mCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
+                mModel.deleteSubstringAt(mModel.caretLineIdx, mModel.caretOffset, mModel.getTextAtCurrentLine().length)
             }
             // if shift is pressed
-            else {
-                mTextBuffersAndTokens.add(mCaretLineIdx + 1, MutablePair(StringBuffer(), arrayListOf()))
-            }
+            else
+                mModel.insertNewLine(mModel.caretLineIdx + 1)
 
             // update the caret offset and line index
-            mCaretOffset = 0
-            mOrigestCaretOffset = mCaretOffset
-            ++mCaretLineIdx
+            mModel.setCaretOffset(0, true)
+            mModel.setCaretLineIndex(mModel.caretLineIdx + 1)
 
             // clear selections
             mSelectionManager.clearSelections()
@@ -530,27 +482,22 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // try to do a certain special operation, e.g., Ctrl+C, Ctrl+X, ...
             if (doSpecialEditorOperationByShortcut(ch)) return
 
-            // get the visible character
+            // get the visible character and also convert it into a string
             val vCh = getVisibleChar(ch) ?: return
+            val vStr = vCh.toString()
 
             // remove the selected text
             removeSelectedText()
 
             // append to the string-buffer
-            mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, vCh)
+            mModel.insertTextAt(mModel.caretLineIdx, mModel.caretOffset, vStr)
 
             // update the caret offset
-            ++mCaretOffset
-            mOrigestCaretOffset = mCaretOffset
+            mModel.setCaretOffset(mModel.caretOffset + 1, true)
 
             // if the character is a symmetric character -> add the symmetric one
-            if (PreferenceManager.EditorPref.Typing.symmetricSymbols.containsKey(vCh.toString())) {
-                // append to the string-buffer
-                mTextBuffersAndTokens[mCaretLineIdx].first.insert(
-                        mCaretOffset,
-                        PreferenceManager.EditorPref.Typing.symmetricSymbols[vCh.toString()]
-                )
-            }
+            if (PreferenceManager.EditorPref.Typing.symmetricSymbols.containsKey(vStr))
+                mModel.insertTextAt(mModel.caretLineIdx, mModel.caretOffset, PreferenceManager.EditorPref.Typing.symmetricSymbols[vStr]!!)
 
             // find out and set the longest line
             setLongestLine(false)
@@ -561,12 +508,11 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // remove the selected text
             removeSelectedText()
 
-            // append to the string-buffer
-            mTextBuffersAndTokens[mCaretLineIdx].first.insert(mCaretOffset, "    ")
+            // append 4 white-spaces to the string-buffer
+            mModel.insertTextAt(mModel.caretLineIdx, mModel.caretOffset, "    ")
 
             // update the caret offset
-            mCaretOffset += 4
-            mOrigestCaretOffset = mCaretOffset
+            mModel.setCaretOffset(mModel.caretOffset + 4, true)
 
             // find out and set the longest line
             setLongestLine(false)
@@ -592,7 +538,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         /* ===================================================================== */
 
         // deal w/ the camera and render the editor
-        if (chCode != KeyCode.CONTROL && chCode != KeyCode.SHIFT) {
+        if (chCode != KeyCode.CONTROL && chCode != KeyCode.SHIFT && chCode != KeyCode.ALT) {
             // deal w/ the camera
             if (shouldMoveCamera)
                 manageCamera()
@@ -607,13 +553,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // shift-pressed -> scrolls horizontal
         if (mIsShiftPressed) {
             // the max x of the editor when scrolling
-            var maxX = mLongestLine.second * PreferenceManager.EditorPref.charW -
-                    mCamera.width +
+            var maxX = mModel.longestLine.second * PreferenceManager.EditorPref.charW -
+                    mModel.camera.width +
                     PreferenceManager.EditorPref.blankWidth
             if (maxX < 0.0) maxX = 0.0
 
             // move the camera left/right
-            mCamera.move(
+            mModel.camera.move(
                     // mouse-wheeling down -> move camera to right
                     offsetX = if (scrollEvent.deltaX < 0.0) PreferenceManager.EditorPref.editorScrollingStepSizeX
                     // mouse-wheeling up -> move camera to left
@@ -624,13 +570,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // not pressed -> scrolls vertical
         else {
             // the max y of the editor when scrolling
-            var maxY = mTextBuffersAndTokens.size * PreferenceManager.EditorPref.lineH -
-                    mCamera.height +
+            var maxY = mModel.getNumOfLines() * PreferenceManager.EditorPref.lineH -
+                    mModel.camera.height +
                     PreferenceManager.EditorPref.blankHeight
             if (maxY < 0.0) maxY = 0.0
 
             // move the camera up/down
-            mCamera.move(
+            mModel.camera.move(
                     // mouse-wheeling down -> move camera to down
                     offsetY = if (scrollEvent.deltaY < 0.0) PreferenceManager.EditorPref.editorScrollingStepSizeY
                     // mouse-wheeling up -> move camera to up
@@ -670,34 +616,14 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     }
 
     // set the longest line
-    private fun setLongestLine(searchWholeText: Boolean) {
-        // search the whole text in the editor
-        if (searchWholeText) {
-            Thread {
-                mTextBuffersAndTokens.forEachIndexed { index, (buffer, _) ->
-                    if (buffer.length > mLongestLine.second)
-                        mLongestLine.setPair(index, buffer.length)
-                }
-            }.start()
-        }
-        // only search the 3 lines round the current caret's line-index
-        else {
-            if (mTextBuffersAndTokens[mCaretLineIdx].first.length > mLongestLine.second)
-                mLongestLine.setPair(mCaretLineIdx, mTextBuffersAndTokens[mCaretLineIdx].first.length)
-            if (mCaretLineIdx > 0 && mTextBuffersAndTokens[mCaretLineIdx - 1].first.length > mLongestLine.second)
-                mLongestLine.setPair(mCaretLineIdx - 1, mTextBuffersAndTokens[mCaretLineIdx - 1].first.length)
-            if (mCaretLineIdx < mTextBuffersAndTokens.size - 1 && mTextBuffersAndTokens[mCaretLineIdx + 1].first.length > mLongestLine.second)
-                mLongestLine.setPair(mCaretLineIdx + 1, mTextBuffersAndTokens[mCaretLineIdx + 1].first.length)
-        }
-    }
+    private fun setLongestLine(searchWholeText: Boolean) { mModel.searchAndSetLongestLine(searchWholeText) }
 
     // remove the selected text
     private fun removeSelectedText() {
-        val pair = mSelectionManager.removeSelectedText(mTextBuffersAndTokens)
+        val pair = mSelectionManager.removeSelectedText(mModel.textBuffersAndTokens)
         if (pair != null) {
-            mCaretLineIdx = pair.first
-            mCaretOffset = pair.second
-            mOrigestCaretOffset = mCaretOffset
+            mModel.setCaretLineIndex(pair.first)
+            mModel.setCaretOffset(pair.second, true)
         }
     }
 
@@ -717,29 +643,29 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // deal w/ the camera
     private fun manageCamera(designatedNumOfLineIdxFromTop: Int? = null) {
         // get the total height to the current line index
-        val totalHeightToLineIdx = (mCaretLineIdx + 1) * PreferenceManager.EditorPref.lineH - mCamera.locY
+        val totalHeightToLineIdx = (mModel.caretLineIdx + 1) * PreferenceManager.EditorPref.lineH - mModel.camera.locY
 
         // adjust the camera's y-offset w/o designating a certain line-index
         if (designatedNumOfLineIdxFromTop == null) {
             // scroll down if the current line is over-flowing (bigger than the editor height)
             if (totalHeightToLineIdx > PreferenceManager.codeCvsHeight) {
                 val difference = totalHeightToLineIdx - PreferenceManager.codeCvsHeight
-                mCamera.move(0.0, difference)
+                mModel.camera.move(0.0, difference)
             }
             // scroll up if the current line is under-flowing (smaller than two lines' height)
             else if (totalHeightToLineIdx < PreferenceManager.EditorPref.lineH * 2.0) {
                 val difference =
-                        if (mCaretLineIdx == 0)
+                        if (mModel.caretLineIdx == 0)
                             PreferenceManager.EditorPref.lineH - totalHeightToLineIdx
                         else
                             PreferenceManager.EditorPref.lineH * 2.0 - totalHeightToLineIdx
-                mCamera.move(0.0, -difference)
+                mModel.camera.move(0.0, -difference)
             }
         }
         // a certain line-index designated, move the camera directly
         else {
-            mCamera.moveTo(
-                    newLocY = max((mCaretLineIdx - designatedNumOfLineIdxFromTop), 0) * PreferenceManager.EditorPref.lineH
+            mModel.camera.moveTo(
+                    newLocY = max((mModel.caretLineIdx - designatedNumOfLineIdxFromTop), 0) * PreferenceManager.EditorPref.lineH
             )
         }
 
@@ -750,17 +676,17 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.LineNumberArea.width
 
         // get the total width to the current caret offset
-        val totalWidthToCaretOffset = offsetX + mCaretOffset * PreferenceManager.EditorPref.charW - mCamera.locX
+        val totalWidthToCaretOffset = offsetX + mModel.caretOffset * PreferenceManager.EditorPref.charW - mModel.camera.locX
 
         // scroll right if the current caret offset is over-flowing (bigger than the editor width)
         if (totalWidthToCaretOffset > PreferenceManager.codeCvsWidth - PreferenceManager.EditorPref.lineStartOffsetX) {
             val difference = totalWidthToCaretOffset - (PreferenceManager.codeCvsWidth - PreferenceManager.EditorPref.lineStartOffsetX)
-            mCamera.move(difference, 0.0)
+            mModel.camera.move(difference, 0.0)
         }
         // scroll left if the current caret offset is under-flowing (smaller than offset-x)
         else if (totalWidthToCaretOffset < offsetX) {
             val difference = offsetX - totalWidthToCaretOffset
-            mCamera.move(-difference, 0.0)
+            mModel.camera.move(-difference, 0.0)
         }
     }
 
@@ -774,7 +700,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // render the selected line hint
         mGphCxt?.fill = PreferenceManager.EditorPref.selectedLineHintClr
-        mGphCxt?.fillRect(-mCamera.locX, mCaretLineIdx * lineH - mCamera.locY, mWidth + mCamera.locX, lineH)
+        mGphCxt?.fillRect(-mModel.camera.locX, mModel.caretLineIdx * lineH - mModel.camera.locY, mWidth + mModel.camera.locX, lineH)
 
         // render the text
         renderText()
@@ -789,15 +715,15 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // render the text, including background-hints of selections
     private fun renderText() {
         // get the lower and upper bounds of current camera location
-        val (lBound, uBound) = mCamera.getCameraCoveredBoundsLinesIndices()
+        val (lBound, uBound) = mModel.camera.getCameraCoveredBoundsLinesIndices()
         val lowerBound = max(lBound, 0)
-        val upperBound = min(uBound, mTextBuffersAndTokens.size - 1)
+        val upperBound = min(uBound, mModel.getNumOfLines() - 1)
 
         // do lexeme analysis
         try {
             // analyze each line
             for (idx in lowerBound..upperBound) {
-                val pair = mTextBuffersAndTokens[idx]
+                val pair = mModel.getTextBufferAndTokensAt(idx)
                 pair.second = PreferenceManager.LangPref.getUsedLang()!!.compile(
                         pair.first.toString() + "\n"
                 )!!
@@ -811,13 +737,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             var caretX = 0
 
             // get classified tokens' backgrounds of each line
-            val tokens = mTextBuffersAndTokens[idx].second
+            val tokens = mModel.getTextBufferAndTokensAt(idx).second
 
             // iterate every token in each line
             tokens.forEach { token ->
                 if (token.text != "\n") {
                     // render text
-                    token.renderBackground(mGphCxt, mCamera, caretX, caretY)
+                    token.renderBackground(mGphCxt, mModel.camera, caretX, caretY)
 
                     // update the caret of x-axis
                     caretX += token.text.length
@@ -831,7 +757,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         /* ====== */
 
         // render the selections hint (background)
-        mSelectionManager.renderSelectionBackground(mGphCxt, mCamera)
+        mSelectionManager.renderSelectionBackground(mGphCxt, mModel.camera)
 
         /* ====== */
 
@@ -842,13 +768,13 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             var caretX = 0
 
             // get classified tokens of each line
-            val tokens = mTextBuffersAndTokens[idx].second
+            val tokens = mModel.getTextBufferAndTokensAt(idx).second
 
             // iterate every token in each line
             tokens.forEach { token ->
                 if (token.text != "\n") {
                     // render text
-                    token.render(mGphCxt, mCamera, caretX, caretY)
+                    token.render(mGphCxt, mModel.camera, caretX, caretY)
 
                     // update the caret of x-axis
                     caretX += token.text.length
@@ -868,12 +794,12 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         mGphCxt?.fill = Color.WHITESMOKE
         mGphCxt?.fillRect(
-                mCaretOffset * charW - halfOfCaretWidth +
+                mModel.caretOffset * charW - halfOfCaretWidth +
                         PreferenceManager.EditorPref.lineStartOffsetX +
                         PreferenceManager.EditorPref.LineNumberArea.width -
-                        mCamera.locX,
-                mCaretLineIdx * PreferenceManager.EditorPref.lineH -
-                        mCamera.locY,
+                        mModel.camera.locX,
+                mModel.caretLineIdx * PreferenceManager.EditorPref.lineH -
+                        mModel.camera.locY,
                 caretW,
                 PreferenceManager.EditorPref.lineH
         )
@@ -901,18 +827,18 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         )
 
         // render the non-selected line numbers
-        val maxDigitLen = (mTextBuffersAndTokens.size - 1).toString().length
+        val maxDigitLen = (mModel.getNumOfLines() - 1).toString().length
         mGphCxt?.fill = PreferenceManager.EditorPref.LineNumberArea.fontClr
         mGphCxt?.font = PreferenceManager.EditorPref.font
-        for (y in 0 until mTextBuffersAndTokens.size) {
-            if (y == mCaretLineIdx)
+        for (y in 0 until mModel.getNumOfLines()) {
+            if (y == mModel.caretLineIdx)
                 continue
             mGphCxt?.fillText(
                     " ".repeat(maxDigitLen - y.toString().length) + y.toString(),
                     PreferenceManager.EditorPref.LineNumberArea.numberOffsetX,
                     (y + 1) * PreferenceManager.EditorPref.lineH -
                             PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize -
-                            mCamera.locY,
+                            mModel.camera.locY,
                     PreferenceManager.EditorPref.LineNumberArea.width
             )
         }
@@ -920,11 +846,11 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // render the selected line number
         mGphCxt?.fill = PreferenceManager.EditorPref.LineNumberArea.selectedFontClr
         mGphCxt?.fillText(
-                " ".repeat(maxDigitLen - mCaretLineIdx.toString().length) + mCaretLineIdx.toString(),
+                " ".repeat(maxDigitLen - mModel.caretLineIdx.toString().length) + mModel.caretLineIdx.toString(),
                 PreferenceManager.EditorPref.LineNumberArea.numberOffsetX,
-                (mCaretLineIdx + 1) * PreferenceManager.EditorPref.lineH -
+                (mModel.caretLineIdx + 1) * PreferenceManager.EditorPref.lineH -
                         PreferenceManager.EditorPref.differenceBetweenLineHeightAndFontSize -
-                        mCamera.locY,
+                        mModel.camera.locY,
                 PreferenceManager.EditorPref.LineNumberArea.width
         )
     }
@@ -934,7 +860,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // copy the selected text
     fun copySelectedText() {
         // get the selected text
-        val selectedText = mSelectionManager.getSelectedText(mTextBuffersAndTokens)
+        val selectedText = mSelectionManager.getSelectedText(mModel.textBuffersAndTokens)
 
         // get the system clipboard and put the selected string into it
         val clipboard = Clipboard.getSystemClipboard()
@@ -969,37 +895,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // remove the selected text first
             removeSelectedText()
 
-            // get the several lines each separated by a single '\n'
+            // add all the lines of texts
             val lines = clipboard.string.split("\n")
-            var first = true
-            var tmpLastHalf = ""
-            // insert them
-            lines.forEach { line ->
-                // add a whole new line if it's NOT the first line
-                if (!first) {
-                    mTextBuffersAndTokens.add(mCaretLineIdx + 1, MutablePair(StringBuffer(), arrayListOf()))
-                    ++mCaretLineIdx
-                    mCaretOffset = 0
-                    mOrigestCaretOffset = mCaretOffset
-                }
-
-                // get the last-half text if it's the first line
-                if (first) {
-                    tmpLastHalf = mTextBuffersAndTokens[mCaretLineIdx].first.substring(mCaretOffset)
-                    mTextBuffersAndTokens[mCaretLineIdx].first.delete(mCaretOffset, mTextBuffersAndTokens[mCaretLineIdx].first.length)
-                }
-
-                // append behind the current caret
-                mTextBuffersAndTokens[mCaretLineIdx].first.append(line)
-                mCaretOffset += line.length
-                mOrigestCaretOffset = mCaretOffset
-
-                // not the first time at all
-                first = false
-            }
-
-            // append the the first line's last-half into the last line
-            mTextBuffersAndTokens[mCaretLineIdx].first.append(tmpLastHalf)
+            mModel.addMultipleLinesOfTextsAtCurrentCaretLocation(lines)
 
             // re-render
             render()
@@ -1017,8 +915,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mSelectionManager.exclusizeSelection(
                 0,
                 0,
-                mTextBuffersAndTokens.size - 1,
-                mTextBuffersAndTokens[mTextBuffersAndTokens.size - 1].first.length
+                mModel.getNumOfLines() - 1,
+                mModel.getTextLengthAt(mModel.getNumOfLines() - 1)
         )
 
         // re-render
@@ -1032,17 +930,17 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
                 "Jump to a certain line",
                 "Line index:",
                 InputType.NON_NEGATIVE_INTEGER,
-                mCaretLineIdx.toString()
+                mModel.caretLineIdx.toString()
         )
         // show the stage and get the line-index
         val lineIdxStr = inputStage.showDialog() ?: return
-        val lineIdx = max(min(lineIdxStr.toInt(), mTextBuffersAndTokens.size - 1), 0)
+        val lineIdx = max(min(lineIdxStr.toInt(), mModel.getNumOfLines() - 1), 0)
 
         // if it's a different line-index
-        if (lineIdx != mCaretLineIdx) {
+        if (lineIdx != mModel.caretLineIdx) {
             // update the caret's location (line-index & offset)
-            mCaretLineIdx = lineIdx
-            mCaretOffset = min(mCaretOffset, mTextBuffersAndTokens[lineIdx].first.length)
+            mModel.setCaretLineIndex(lineIdx)
+            mModel.setCaretOffset(min(mModel.caretOffset, mModel.getTextLengthAt(lineIdx)), false)
 
             // deal w/ the camera
             manageCamera()

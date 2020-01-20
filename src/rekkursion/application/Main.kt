@@ -6,7 +6,7 @@ import javafx.scene.Scene
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import rekkursion.manager.PreferenceManager
-import rekkursion.view.control.CodeCanvas
+import rekkursion.view.control.editor.CodeCanvas
 
 class Main: Application() {
     override fun start(primaryStage: Stage) {

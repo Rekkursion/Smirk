@@ -10,7 +10,7 @@
 //import rekkursion.manager.PreferenceManager;
 //import rekkursion.util.Language;
 //import rekkursion.util.TokenPrototype;
-//import rekkursion.view.control.CodeCanvas;
+//import rekkursion.view.control.editor.CodeCanvas;
 //
 //public class Main extends Application {
 //    @Override
