@@ -8,9 +8,13 @@ class EditorInsertTextCommand(editorModel: EditorModel, selectionManager: Select
     override val mEditor: EditorModel = editorModel
     override val mSelectionManager: SelectionManager = selectionManager
 
+    /* number of args: 1
+     * -----------------
+     * 1. String: the text which will be inserted (could be single-line text or multiple-line text)
+     * */
     override fun execute(vararg args: Any?) {
         // clear the selected texts before the insertion
-        clearSelection()
+        removeSelectedText()
 
         // get the to-be-inserted text (could be single-line or multiple-line)
         val text = args[0]!! as String

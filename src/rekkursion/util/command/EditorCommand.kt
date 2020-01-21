@@ -10,8 +10,8 @@ interface EditorCommand: Command {
     // the selection-manager for selection management
     val mSelectionManager: SelectionManager
 
-    // clear the selection if needed
-    fun clearSelection() {
+    // remove the selected text
+    fun removeSelectedText() {
         val pair = mSelectionManager.removeSelectedText(mEditor.textBuffersAndTokens)
         if (pair != null) {
             mEditor.setCaretLineIndex(pair.first)

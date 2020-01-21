@@ -15,9 +15,7 @@ import rekkursion.view.stage.InputType
 import rekkursion.view.stage.SingleLineTextInputStage
 import rekkursion.util.Camera
 import rekkursion.util.Token
-import rekkursion.util.command.Command
-import rekkursion.util.command.EditorCommand
-import rekkursion.util.command.EditorInsertTextCommand
+import rekkursion.util.command.*
 import rekkursion.util.tool.MutablePair
 import java.lang.Exception
 
@@ -76,6 +74,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     private fun initCommands() {
         // text insertion command
         mEditorCommands[EditorInsertTextCommand::class.java.name] = EditorInsertTextCommand(mModel, mSelectionManager)
+        // text removing command
+        mEditorCommands[EditorRemoveTextCommand::class.java.name] = EditorRemoveTextCommand(mModel, mSelectionManager)
     }
 
     // initialize the events
@@ -406,55 +406,15 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // back-space
         else if (chCode == KeyCode.BACK_SPACE) {
-            // delete the selected text
-            if (mSelectionManager.hasSelection())
-                removeSelectedText()
-
-            // delete a single character or '\n' in front of the caret
-            else {
-                // delete a single character in front of the caret
-                if (mModel.caretOffset > 0) {
-                    mModel.deleteCharAt(mModel.caretLineIdx, mModel.caretOffset - 1)
-                    mModel.setCaretOffset(mModel.caretOffset - 1, true)
-                }
-                // delete a '\n'
-                else {
-                    if (mModel.caretLineIdx > 0) {
-                        mModel.setCaretOffset(mModel.getTextLengthAt(mModel.caretLineIdx - 1), true)
-                        mModel.appendTextAt(mModel.caretLineIdx - 1, mModel.getTextAtCurrentLine())
-                        mModel.removeCurrentLine()
-                        mModel.setCaretLineIndex(mModel.caretLineIdx - 1)
-                    }
-                }
-            }
-
-            // find out and set the longest line
-            setLongestLine(false)
+            mEditorCommands[EditorRemoveTextCommand::class.java.name]?.execute(TextRemovingActionType.BACK_SPACE)
         }
 
         // delete
         else if (chCode == KeyCode.DELETE) {
-            // delete the selected text (as the same operation of back-space)
-            if (mSelectionManager.hasSelection())
-                removeSelectedText()
-
-            // delete a single character or '\n' behind the caret
-            else {
-                // delete a single character behind the caret
-                if (mModel.caretOffset < mModel.getTextAtCurrentLine().length)
-                    mModel.deleteCharAt(mModel.caretLineIdx, mModel.caretOffset)
-                // delete a '\n'
-                else {
-                    if (mModel.caretLineIdx < mModel.getNumOfLines() - 1) {
-                        mModel.appendTextAt(mModel.caretLineIdx, mModel.getTextAt(mModel.caretLineIdx + 1))
-                        mModel.removeLineAt(mModel.caretLineIdx + 1)
-                    }
-                }
-            }
-
-            // find out and set the longest line
-            setLongestLine(false)
+            mEditorCommands[EditorRemoveTextCommand::class.java.name]?.execute(TextRemovingActionType.DELETE)
         }
+
+        /* ===================================================================== */
 
         // enter (shift-able)
         else if (chCode == KeyCode.ENTER) {
@@ -465,8 +425,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // insert a single '\n'
             mEditorCommands[EditorInsertTextCommand::class.java.name]?.execute("\n")
         }
-
-        /* ===================================================================== */
 
         // visible character & white-space (shift-able)
         else if (chCode.code >= 32) {
@@ -575,18 +533,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             if (ch.isEmpty()) null else ch[0]
         else
             mShiftableCharactersMap?.getOrDefault(ch, null)
-    }
-
-    // set the longest line
-    private fun setLongestLine(searchWholeText: Boolean) { mModel.searchAndSetLongestLine(searchWholeText) }
-
-    // remove the selected text
-    private fun removeSelectedText() {
-        val pair = mSelectionManager.removeSelectedText(mModel.textBuffersAndTokens)
-        if (pair != null) {
-            mModel.setCaretLineIndex(pair.first)
-            mModel.setCaretOffset(pair.second, true)
-        }
     }
 
     // deal w/ an unprocessed interval
@@ -834,17 +780,12 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // cut the selected text
     fun cutSelectedText() {
         /* cut = copy + delete */
-
         // copy
         copySelectedText()
         // then delete
-        removeSelectedText()
-
+        mEditorCommands[EditorRemoveTextCommand::class.java.name]?.execute(TextRemovingActionType.SELECTED)
         // re-render
         render()
-
-        // find the longest line among all of the text
-        setLongestLine(true)
     }
 
     // paste the selected text
