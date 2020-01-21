@@ -125,6 +125,9 @@ class EditorModel(editorWidth: Double, editorHeight: Double) {
 
             // not the first time at all
             first = false
+
+            // update the longest line
+            searchAndSetLongestLine(false)
         }
 
         // append the the first line's last-half into the last line

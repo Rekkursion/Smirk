@@ -1,16 +1,31 @@
 package rekkursion.util.command
 
 import rekkursion.manager.PreferenceManager
+import rekkursion.manager.SelectionManager
 import rekkursion.model.EditorModel
 
-class EditorInsertTextCommand(editorModel: EditorModel): EditorCommand {
-    // the editor to be operated
+class EditorInsertTextCommand(editorModel: EditorModel, selectionManager: SelectionManager): EditorCommand {
     override val mEditor: EditorModel = editorModel
+    override val mSelectionManager: SelectionManager = selectionManager
 
-    // execute the operation
     override fun execute(vararg args: Any?) {
-        // get the to-be-inserted text and its length
+        // clear the selected texts before the insertion
+        clearSelection()
+
+        // get the to-be-inserted text (could be single-line or multiple-line)
         val text = args[0]!! as String
+
+        // the passed text has at least one '\n' -> multiple lines
+        if (text.contains("\n"))
+            insertMultipleLineText(text.split("\n"))
+        // otherwise -> single line
+        else
+            insertSingleLineText(text)
+    }
+
+    // insert the single-line text
+    private fun insertSingleLineText(text: String) {
+        // get the length of this single-line text
         val textLen = text.length
 
         // append to the string-buffer
@@ -25,5 +40,10 @@ class EditorInsertTextCommand(editorModel: EditorModel): EditorCommand {
 
         // find out and set the longest line
         mEditor.searchAndSetLongestLine(false)
+    }
+
+    // insert the multiple-line text
+    private fun insertMultipleLineText(texts: List<String>) {
+        mEditor.addMultipleLinesOfTextsAtCurrentCaretLocation(texts)
     }
 }

@@ -31,7 +31,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     private val mModel = EditorModel(mWidth, mHeight)
 
     // some commands for editor operations
-    private val mEditorCommands = HashMap<Int, Command>()
+    private val mEditorCommands = HashMap<String, Command>()
 
     // the graphics context
     private var mGphCxt: GraphicsContext? = null
@@ -56,10 +56,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         // insert the first line initially
         mModel.insertNewLine(0)
 
-        // initialize commands
-        mEditorCommands[32] = EditorInsertTextCommand(mModel)
-
         initGraphicsContext()
+        initCommands()
         initEvents()
         initPropertyListeners()
     }
@@ -72,6 +70,12 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         mGphCxt?.font = PreferenceManager.EditorPref.font
 
         render()
+    }
+
+    // initialize commands
+    private fun initCommands() {
+        // text insertion command
+        mEditorCommands[EditorInsertTextCommand::class.java.name] = EditorInsertTextCommand(mModel, mSelectionManager)
     }
 
     // initialize the events
@@ -176,6 +180,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         }
     }
 
+    /* ===================================================================== */
+
     // handle the mouse click-location invoked by the event of on-mouse-pressed
     private fun handleMouseDown(mouseX: Double, mouseY: Double) {
         // set the mouse location when mouse-down
@@ -210,14 +216,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         /* ===================================================================== */
 
-        // F5
-        if (chCode == KeyCode.F5) {
-        }
-
-        /* ===================================================================== */
-
         // left arrow (ctrl-able, shift-able)
-        else if (chCode == KeyCode.LEFT) {
+        if (chCode == KeyCode.LEFT) {
             // ctrl + left: move a word to left
             if (mIsCtrlPressed) {
                 if (mModel.caretOffset > 0) {
@@ -458,30 +458,12 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // enter (shift-able)
         else if (chCode == KeyCode.ENTER) {
-            // if shift is NOT pressed
-            if (!mIsShiftPressed) {
-                // remove the selected text
-                removeSelectedText()
+            // if shift is pressed -> move the caret to the end of this line
+            if (mIsShiftPressed)
+                mModel.setCaretOffset(mModel.getTextLengthAt(mModel.caretLineIdx), false)
 
-                // insert a new string-buffer for this new line
-                mModel.insertNewLine(mModel.caretLineIdx + 1, mModel.getTextAtCurrentLine().substring(mModel.caretOffset))
-
-                // move the sub-string behind the origin caret location to the new line
-                mModel.deleteSubstringAt(mModel.caretLineIdx, mModel.caretOffset, mModel.getTextAtCurrentLine().length)
-            }
-            // if shift is pressed
-            else
-                mModel.insertNewLine(mModel.caretLineIdx + 1)
-
-            // update the caret offset and line index
-            mModel.setCaretOffset(0, true)
-            mModel.setCaretLineIndex(mModel.caretLineIdx + 1)
-
-            // clear selections
-            mSelectionManager.clearSelections()
-
-            // find out and set the longest line
-            setLongestLine(false)
+            // insert a single '\n'
+            mEditorCommands[EditorInsertTextCommand::class.java.name]?.execute("\n")
         }
 
         /* ===================================================================== */
@@ -495,46 +477,33 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             val vCh = getVisibleChar(ch) ?: return
             val vStr = vCh.toString()
 
-            // remove the selected text
-            removeSelectedText()
-
             // do the command of insert the visible (includes space) string
-            mEditorCommands[32]?.execute(vStr)
+            mEditorCommands[EditorInsertTextCommand::class.java.name]?.execute(vStr)
         }
 
         // tab
         else if (chCode == KeyCode.TAB) {
-            // remove the selected text
-            removeSelectedText()
-
             // do the command of insert 4 white-spaces as a '\t' character
-            mEditorCommands[32]?.execute("    ")
+            mEditorCommands[EditorInsertTextCommand::class.java.name]?.execute("    ")
         }
 
         /* ===================================================================== */
 
         // modifier: ctrl
-        else if (chCode == KeyCode.CONTROL) {
-            mIsCtrlPressed = true
-        }
+        else if (chCode == KeyCode.CONTROL) mIsCtrlPressed = true
 
         // modifier: shift
-        else if (chCode == KeyCode.SHIFT) {
-            mIsShiftPressed = true
-        }
+        else if (chCode == KeyCode.SHIFT) mIsShiftPressed = true
 
         // modifier: alt
-        else if (chCode == KeyCode.ALT) {
-            mIsAltPressed = true
-        }
+        else if (chCode == KeyCode.ALT) mIsAltPressed = true
 
         /* ===================================================================== */
 
         // deal w/ the camera and render the editor
         if (chCode != KeyCode.CONTROL && chCode != KeyCode.SHIFT && chCode != KeyCode.ALT) {
             // deal w/ the camera
-            if (shouldMoveCamera)
-                manageCamera()
+            if (shouldMoveCamera) manageCamera()
 
             // re-render
             render()
@@ -885,18 +854,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // if the clipboard has a string -> paste it on
         if (clipboard.hasString()) {
-            // remove the selected text first
-            removeSelectedText()
-
-            // add all the lines of texts
-            val lines = clipboard.string.split("\n")
-            mModel.addMultipleLinesOfTextsAtCurrentCaretLocation(lines)
-
-            // re-render
+            mEditorCommands[EditorInsertTextCommand::class.java.name]?.execute(clipboard.string)
             render()
-
-            // find the longest line among all of the text
-            setLongestLine(true)
         }
     }
 
