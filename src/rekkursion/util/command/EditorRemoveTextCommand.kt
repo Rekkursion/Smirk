@@ -7,9 +7,8 @@ enum class TextRemovingActionType {
     BACK_SPACE, DELETE, SELECTED
 }
 
-class EditorRemoveTextCommand(editorModel: EditorModel, selectionManager: SelectionManager): EditorCommand {
+class EditorRemoveTextCommand(editorModel: EditorModel): EditorCommand {
     override val mEditor: EditorModel = editorModel
-    override val mSelectionManager: SelectionManager = selectionManager
 
     /* number of args: 1
      * -----------------
@@ -26,7 +25,7 @@ class EditorRemoveTextCommand(editorModel: EditorModel, selectionManager: Select
     // back-space key pressed -> remove a character in front of the caret
     private fun removeCharacterInFrontOfCaret() {
         // delete the selected text
-        if (mSelectionManager.hasSelection()) {
+        if (mEditor.selectionManager.hasSelection()) {
             removeSelectedText()
             mEditor.searchAndSetLongestLine(true)
         }
@@ -56,7 +55,7 @@ class EditorRemoveTextCommand(editorModel: EditorModel, selectionManager: Select
     // delete key pressed -> remove a character behind the caret
     private fun removeCharacterBehindCaret() {
         // delete the selected text (as the same operation of back-space)
-        if (mSelectionManager.hasSelection()) {
+        if (mEditor.selectionManager.hasSelection()) {
             removeSelectedText()
             mEditor.searchAndSetLongestLine(true)
         }

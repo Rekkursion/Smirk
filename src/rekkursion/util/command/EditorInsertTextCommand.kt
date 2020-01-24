@@ -4,9 +4,8 @@ import rekkursion.manager.PreferenceManager
 import rekkursion.manager.SelectionManager
 import rekkursion.model.EditorModel
 
-class EditorInsertTextCommand(editorModel: EditorModel, selectionManager: SelectionManager): EditorCommand {
+class EditorInsertTextCommand(editorModel: EditorModel): EditorCommand {
     override val mEditor: EditorModel = editorModel
-    override val mSelectionManager: SelectionManager = selectionManager
 
     /* number of args: 1
      * -----------------

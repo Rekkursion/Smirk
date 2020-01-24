@@ -46,9 +46,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // the point when the mouse is down
     private var mMouseDownPt: Point2D? = null
 
-    // for managing the selections of texts
-    private val mSelectionManager = SelectionManager()
-
     // for primary constructor
     init {
         // insert the first line initially
@@ -73,9 +70,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // initialize commands
     private fun initCommands() {
         // text insertion command
-        mEditorCommands[EditorInsertTextCommand::class.java.name] = EditorInsertTextCommand(mModel, mSelectionManager)
+        mEditorCommands[EditorInsertTextCommand::class.java.name] = EditorInsertTextCommand(mModel)
         // text removing command
-        mEditorCommands[EditorRemoveTextCommand::class.java.name] = EditorRemoveTextCommand(mModel, mSelectionManager)
+        mEditorCommands[EditorRemoveTextCommand::class.java.name] = EditorRemoveTextCommand(mModel)
     }
 
     // initialize the events
@@ -213,6 +210,9 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         val origLineIdx = mModel.caretLineIdx
         val origCaretOffset = mModel.caretOffset
         var shouldMoveCamera = true
+
+        // try to do a certain special operation, e.g., Ctrl+C, Ctrl+X, ...
+        if (doSpecialEditorOperationByShortcut(ch)) return
 
         /* ===================================================================== */
 
@@ -428,9 +428,6 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // visible character & white-space (shift-able)
         else if (chCode.code >= 32) {
-            // try to do a certain special operation, e.g., Ctrl+C, Ctrl+X, ...
-            if (doSpecialEditorOperationByShortcut(ch)) return
-
             // get the visible character and also convert it into a string
             val vCh = getVisibleChar(ch) ?: return
             val vStr = vCh.toString()
@@ -441,8 +438,8 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
         // tab
         else if (chCode == KeyCode.TAB) {
-            // do the command of insert 4 white-spaces as a '\t' character
-            mEditorCommands[EditorInsertTextCommand::class.java.name]?.execute("    ")
+            // do the command of insert a certain number of white-spaces as a '\t' character
+            mEditorCommands[EditorInsertTextCommand::class.java.name]?.execute(" ".repeat(PreferenceManager.EditorPref.Typing.numOfWhiteSpacesAsTab))
         }
 
         /* ===================================================================== */
@@ -511,11 +508,14 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
 
     // do the special editor operation
     private fun doSpecialEditorOperationByShortcut(ch: String): Boolean {
-        // if it's not a single character -> false
-        if (ch.length != 1) return false
+        val str = when {
+            ch == "\t" -> "Tab"
+            ch.length == 1 -> ch.toUpperCase()
+            else -> ch
+        }
 
         // get the key code from ch, then try to get the corresponding function
-        val keyCode = KeyCode.getKeyCode(ch.toUpperCase()) ?: return false
+        val keyCode = KeyCode.getKeyCode(str) ?: return false
         val func = PreferenceManager.EditorPref.Shortcuts.getOperationFunction(
                 mIsCtrlPressed,
                 mIsShiftPressed,
@@ -538,14 +538,14 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // deal w/ an unprocessed interval
     private fun manageSelectionWithAnInterval(startLineIdx: Int, startLineOffset: Int, endLineIdx: Int, endLineOffset: Int, isSelecting: Boolean = mIsShiftPressed) {
         if (isSelecting)
-            mSelectionManager.exclusizeSelection(
+            mModel.selectionManager.exclusizeSelection(
                     startLineIdx,
                     startLineOffset,
                     endLineIdx,
                     endLineOffset
             )
         else
-            mSelectionManager.clearSelections()
+            mModel.selectionManager.clearSelections()
     }
 
     // deal w/ the camera
@@ -665,7 +665,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         /* ====== */
 
         // render the selections hint (background)
-        mSelectionManager.renderSelectionBackground(mGphCxt, mModel.camera)
+        mModel.selectionManager.renderSelectionBackground(mGphCxt, mModel.camera)
 
         /* ====== */
 
@@ -768,7 +768,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // copy the selected text
     fun copySelectedText() {
         // get the selected text
-        val selectedText = mSelectionManager.getSelectedText(mModel.textBuffersAndTokens)
+        val selectedText = mModel.selectionManager.getSelectedText(mModel.textBuffersAndTokens)
 
         // get the system clipboard and put the selected string into it
         val clipboard = Clipboard.getSystemClipboard()
@@ -784,7 +784,7 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
         copySelectedText()
         // then delete
         mEditorCommands[EditorRemoveTextCommand::class.java.name]?.execute(TextRemovingActionType.SELECTED)
-        // re-render
+
         render()
     }
 
@@ -803,16 +803,15 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
     // select all text
     fun selectAllText() {
         // clear all selections first
-        mSelectionManager.clearSelections()
+        mModel.selectionManager.clearSelections()
         // then select all text
-        mSelectionManager.exclusizeSelection(
+        mModel.selectionManager.exclusizeSelection(
                 0,
                 0,
                 mModel.getNumOfLines() - 1,
                 mModel.getTextLengthAt(mModel.getNumOfLines() - 1)
         )
 
-        // re-render
         render()
     }
 
@@ -838,9 +837,14 @@ class CodeCanvas(private val mWidth: Double, private val mHeight: Double): Canva
             // deal w/ the camera
             manageCamera()
 
-            // re-render
             render()
         }
+    }
+
+    // de-indent of the current line
+    fun deIndent() {
+        mModel.deIndent()
+        render()
     }
 
     /* ===================================================================== */

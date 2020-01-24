@@ -16,19 +16,23 @@ class TextInterval(start: MutablePair<Int, Int>, end: MutablePair<Int, Int>) {
 
     /* ===================================================================== */
 
-    // set the start location
-    fun setStart(lineIdx: Int = mStart.first, lineOffset: Int = mStart.second) {
-        mStart.first = lineIdx
-        mStart.second = lineOffset
+    // set the start
+    fun setStart(first: Int? = mStart.first, second: Int? = mStart.second) {
+        if (first != null)
+            mStart.first = first
+        if (second != null)
+            mStart.second = second
     }
 
-    // set the end location
-    fun setEnd(lineIdx: Int = mEnd.first, lineOffset: Int = mEnd.second) {
-        mEnd.first = lineIdx
-        mEnd.second = lineOffset
+    // set the end
+    fun setEnd(first: Int? = mEnd.first, second: Int? = mEnd.second) {
+        if (first != null)
+            mEnd.first = first
+        if (second != null)
+            mEnd.second = second
     }
 
-    // set the end location
+    // set the end by a mutable-pair
     fun setEnd(pair: MutablePair<Int, Int>) { setEnd(pair.first, pair.second) }
 
     // copy

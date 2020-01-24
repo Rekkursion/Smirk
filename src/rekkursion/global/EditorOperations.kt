@@ -18,3 +18,5 @@ fun selectAllText(codeCanvas: CodeCanvas) { codeCanvas.selectAllText() }
 
 // jump to the designated line
 fun jumpToDesignatedLine(codeCanvas: CodeCanvas) { codeCanvas.jumpToDesignatedLine() }
+
+fun deIndent(codeCanvas: CodeCanvas) { codeCanvas.deIndent() }

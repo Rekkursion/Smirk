@@ -67,6 +67,16 @@ class SelectionManager {
         return ""
     }
 
+    // set the primary-selection
+    fun setPrimarySelection(
+            startLineIdx: Int? = primarySelection?.startCopied?.first,
+            startLineOffset: Int? = primarySelection?.startCopied?.second,
+            endLineIdx: Int? = primarySelection?.endCopied?.first,
+            endLineOffset: Int? = primarySelection?.endCopied?.second) {
+        mPrimarySelection?.setStart(startLineIdx, startLineOffset)
+        mPrimarySelection?.setEnd(endLineIdx, endLineOffset)
+    }
+
     // remove the selected text
     fun removeSelectedText(buffersAndTokens: ArrayList<MutablePair<StringBuffer, ArrayList<Token>>>): MutablePair<Int, Int>? {
         mPrimarySelection?.let {
@@ -102,7 +112,7 @@ class SelectionManager {
     // render the selection effect
     fun renderSelectionBackground(gphCxt: GraphicsContext?, camera: Camera) {
         // if main-selection is NOT null
-        mPrimarySelection?.let { mainSelection ->
+        mPrimarySelection?.let { primarySelection ->
             // get the offset-x of typing area
             val offsetX = PreferenceManager.EditorPref.lineStartOffsetX + PreferenceManager.EditorPref.LineNumberArea.width
 
@@ -110,10 +120,10 @@ class SelectionManager {
             gphCxt?.fill = PreferenceManager.EditorPref.selectionClr
 
             // get start's & end's line-indices & line-offsets
-            val startLineIdx = mainSelection.startCopied.first
-            val startLineOffset = mainSelection.startCopied.second
-            val endLineIdx = mainSelection.endCopied.first
-            val endLineOffset = mainSelection.endCopied.second
+            val startLineIdx = primarySelection.startCopied.first
+            val startLineOffset = primarySelection.startCopied.second
+            val endLineIdx = primarySelection.endCopied.first
+            val endLineOffset = primarySelection.endCopied.second
 
             // if start & end are at the same line (has only a single line)
             if (startLineIdx == endLineIdx) {
@@ -181,16 +191,16 @@ class SelectionManager {
 
     /* ===================================================================== */
 
-    // region private: get the smaller line-index and line-offset
-    private fun getSmallerBound(): MutablePair<Int, Int>? = when {
+    // region get the smaller line-index and line-offset
+    fun getSmallerBound(): MutablePair<Int, Int>? = when {
         mPrimarySelection == null -> null
         mPrimarySelection!!.isReversed() -> mPrimarySelection!!.endCopied
         else -> mPrimarySelection!!.startCopied
     }
     // endregion
 
-    // region private: get the bigger line-index and line-offset
-    private fun getBiggerBound(): MutablePair<Int, Int>? = when {
+    // region get the bigger line-index and line-offset
+    fun getBiggerBound(): MutablePair<Int, Int>? = when {
         mPrimarySelection == null -> null
         mPrimarySelection!!.isReversed() -> mPrimarySelection!!.startCopied
         else -> mPrimarySelection!!.endCopied

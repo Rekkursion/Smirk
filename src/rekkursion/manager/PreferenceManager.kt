@@ -53,6 +53,8 @@ object PreferenceManager {
                     .addOrModifyShortcut("100", KeyCode.getKeyCode("A").code, "selectAllText")
                     // Ctrl, G = jump to the designated line
                     .addOrModifyShortcut("100", KeyCode.getKeyCode("G").code, "jumpToDesignatedLine")
+                    // Shift, Tab = de-indent
+                    .addOrModifyShortcut("010", KeyCode.getKeyCode("Tab").code, "deIndent")
             // endregion
 
             // region get the corresponding function by a certain shortcut combination
@@ -226,6 +228,15 @@ object PreferenceManager {
 
         // some settings about typing operations
         object Typing {
+            // region the number of white-spaces as a '\t'
+            private var mNumOfWhiteSpacesAsTab = 4
+            var numOfWhiteSpacesAsTab
+                get() = mNumOfWhiteSpacesAsTab
+                set(value) { mNumOfWhiteSpacesAsTab = value }
+            // endregion
+
+            /* ========== */
+
             // the symmetric symbols
             val symmetricSymbols = hashMapOf<String, String>(
                     "(" to ")",
@@ -233,6 +244,8 @@ object PreferenceManager {
                     "{" to "}",
                     "/*" to "*/"
             )
+
+
         }
     }
 

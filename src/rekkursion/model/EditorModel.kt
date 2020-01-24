@@ -1,14 +1,22 @@
 package rekkursion.model
 
+import rekkursion.manager.PreferenceManager
+import rekkursion.manager.SelectionManager
 import rekkursion.util.Camera
 import rekkursion.util.Token
 import rekkursion.util.tool.MutablePair
 import java.util.ArrayList
+import kotlin.math.max
+import kotlin.math.min
 
 class EditorModel(editorWidth: Double, editorHeight: Double) {
     // the camera
     private val mCamera = Camera(width = editorWidth, height = editorHeight)
     val camera get() = mCamera
+
+    // the selection-manager
+    private val mSelectionManager = SelectionManager()
+    val selectionManager get() = mSelectionManager
 
     // the current line index of the caret
     private var mCaretLineIdx = 0
@@ -47,6 +55,15 @@ class EditorModel(editorWidth: Double, editorHeight: Double) {
 
     // get the string-buffer and its corresponding tokens at a certain line
     fun getTextBufferAndTokensAt(lineIdx: Int): MutablePair<StringBuffer, ArrayList<Token>> = mTextBuffersAndTokens[lineIdx]
+
+    // get the number of prefix white-spaces at a certain line
+    private fun getNumOfPrefixWhiteSpacesAt(lineIdx: Int): Int {
+        val firstIdxNotWhiteSpace = mTextBuffersAndTokens[lineIdx].first.indexOfFirst { it != ' ' }
+        return if (firstIdxNotWhiteSpace >= 0)
+            firstIdxNotWhiteSpace
+        else
+            mTextBuffersAndTokens[lineIdx].first.length
+    }
 
     /* ===================================================================== */
 
@@ -152,5 +169,63 @@ class EditorModel(editorWidth: Double, editorHeight: Double) {
     // delete a piece of sub-string at a certain line
     fun deleteSubstringAt(lineIdx: Int, textStartIdx: Int, textEndIdx: Int) {
         mTextBuffersAndTokens[lineIdx].first.delete(textStartIdx, textEndIdx)
+    }
+
+    // de-indent at a single line or a range of lines
+    fun deIndent() {
+        fun getNumOfWhiteSpacesToBeDeleted(numOfPrefixWhiteSpaces: Int, numOfWhiteSpacesAsTab: Int): Int = if (numOfPrefixWhiteSpaces > 0 && numOfPrefixWhiteSpaces % numOfWhiteSpacesAsTab == 0)
+            numOfWhiteSpacesAsTab
+        else
+            numOfPrefixWhiteSpaces % numOfWhiteSpacesAsTab
+
+        // get the number of white-spaces as a '\t'
+        val numOfWhiteSpacesAsTab = PreferenceManager.EditorPref.Typing.numOfWhiteSpacesAsTab
+
+        // has selection -> multiple lines possible
+        if (mSelectionManager.hasSelection()) {
+            // for moving the caret and adjusting the selection if has one
+            var numOfDeletedWhiteSpacesAtStartLine = 0
+            var numOfDeletedWhiteSpacesAtEndLine = 0
+            var numOfDeletedWhiteSpacesAtCurrentLine = 0
+
+            // the indices of start- & end- lines respectively
+            val startLineIdx = mSelectionManager.primarySelection!!.startCopied.first
+            val endLineIdx = mSelectionManager.primarySelection!!.endCopied.first
+
+            // iterate from start-line to/down to end-line of the primary selection
+            for (lineIdx in if (mSelectionManager.primarySelection!!.isReversed()) startLineIdx downTo endLineIdx else startLineIdx..endLineIdx) {
+                val numOfPrefixWhiteSpaces = getNumOfPrefixWhiteSpacesAt(lineIdx)
+                val numOfWhiteSpacesToBeDeleted = getNumOfWhiteSpacesToBeDeleted(numOfPrefixWhiteSpaces, numOfWhiteSpacesAsTab)
+
+                // if it's the start-line, store the number of to-be-deleted white-spaces
+                if (lineIdx == startLineIdx)
+                    numOfDeletedWhiteSpacesAtStartLine = numOfWhiteSpacesToBeDeleted
+                // if it's the end-line, store the number of to-be-deleted white-spaces as well
+                if (lineIdx == endLineIdx)
+                    numOfDeletedWhiteSpacesAtEndLine = numOfWhiteSpacesToBeDeleted
+                // if it's the line that the caret current at, store the number of to-be-deleted white-spaces as well
+                if (lineIdx == mCaretLineIdx)
+                    numOfDeletedWhiteSpacesAtCurrentLine = numOfWhiteSpacesToBeDeleted
+
+                mTextBuffersAndTokens[lineIdx].first.delete(0, numOfWhiteSpacesToBeDeleted)
+            }
+
+            // move the caret after the deletion
+            mCaretOffset = max(mCaretOffset - numOfDeletedWhiteSpacesAtCurrentLine, 0)
+
+            // adjust the selection after the deletion
+            mSelectionManager.setPrimarySelection(
+                    startLineOffset = max(mSelectionManager.primarySelection!!.startCopied.second - numOfDeletedWhiteSpacesAtStartLine, 0),
+                    endLineOffset = max(mSelectionManager.primarySelection!!.endCopied.second - numOfDeletedWhiteSpacesAtEndLine, 0)
+            )
+        }
+        // doesn't have selection -> single line
+        else {
+            val numOfPrefixWhiteSpaces = getNumOfPrefixWhiteSpacesAt(mCaretLineIdx)
+            val numOfWhiteSpacesToBeDeleted = getNumOfWhiteSpacesToBeDeleted(numOfPrefixWhiteSpaces, numOfWhiteSpacesAsTab)
+
+            mTextBuffersAndTokens[mCaretLineIdx].first.delete(0, numOfWhiteSpacesToBeDeleted)
+            mCaretOffset = max(mCaretOffset - numOfWhiteSpacesToBeDeleted, 0)
+        }
     }
 }
